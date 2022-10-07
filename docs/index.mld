@@ -1,0 +1,35 @@
+{0 OCADml}
+
+   OCADml is a collection of types and functions facilitating Computer Aided
+   Design (CAD) in OCAml.
+
+{1:api API}
+
+{!module-OCADml} -- top level library interface
+
+{2 Vectors and transformations}
+- {{!OCADml.V2} [V2]} -- 2d vector operations
+- {{!OCADml.V3} [V3]} -- 3d vector operations
+- {{!OCADml.Affine2} [Affine2]} -- 2d affine transformation matrices
+- {{!OCADml.Affine3} [Affine3]} -- 3d affine transformation matrices
+- {{!OCADml.Quaternion} [Quaternion]} --
+ {{:https://en.wikipedia.org/wiki/Quaternion} quaternion} manipulation andl application
+- {{!OCADml.Plane} [Plane]} -- normalized cartesian plane operations
+
+{2 2d paths and polygons}
+- {{!OCADml.Path2} [Path2]} -- generation and manipulation of 2d paths
+- {{!OCADml.Bezier2} [Bezier2]} -- 2d bezier curves, patches, and splines
+- {{!OCADml.CubicSpline} [CubicSpline]} -- cubic spline interpolation of 2d paths
+- {{!OCADml.Poly2} [Poly2]} -- 2d polygons (outer, and zero or more inner paths)
+- {{!OCADml.PolyText} [PolyText]} -- point representations of text (via cairo)
+
+{2 3d paths, coplanar polygons, and meshes}
+- {{!OCADml.Path3} [Path3]} -- generation and manipulation of 3d paths
+- {{!OCADml.Bezier3} [Bezier3]} -- 3d bezier curves, patches, and splines
+- {{!OCADml.Poly3} [Poly3]} -- planar 3d polygons (outer, and zero or more inner paths)
+- {{!OCADml.Mesh} [Mesh]} -- points and faces 3d mesh representation (polyhedrons)
+
+{2 Utilities}
+- {{!OCADml.Math} [Math]} -- float and 2d matrix operations
+- {{!OCADml.BallTree2} [BallTree2]} -- 2d vector space partitioning search tree
+- {{!OCADml.BallTree3} [BallTree3]} -- 3d vector space partitioning search tree
