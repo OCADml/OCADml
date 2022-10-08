@@ -56,3 +56,12 @@ let make p1 p2 =
     else if x >= 1. || Math.approx 1. x
     then 1.
     else (bez (u_of_x x)).y
+
+type handles = v2 * v2
+
+let linear = v2 0. 0., v2 1. 1.
+let ease = v2 0.25 0.1, v2 0.25 1.
+let ease_in = v2 0.42 0., v2 1. 1.
+let ease_in_out = v2 0.42 0., v2 0.58 1.
+let ease_out = v2 0. 0., v2 0.58 1.
+let[@inline] of_handles (p1, p2) = make p1 p2
