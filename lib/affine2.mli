@@ -73,10 +73,20 @@ val zrot : ?about:V2.t -> float -> t
     alignment with [b]. *)
 val align : V2.t -> V2.t -> t
 
-(** [scaling v]
+(** [scale v]
 
     Create a 2d affine transformation matrix from the xyz scaling vector [v]. *)
 val scale : V2.t -> t
+
+(** [xscale x]
+
+    Create a 2d affine transformation matrix that applies x-axis scaling. *)
+val xscale : float -> t
+
+(** [yscale y]
+
+    Create a 2d affine transformation matrix that applies y-axis scaling. *)
+val yscale : float -> t
 
 (** [mirror ax]
 

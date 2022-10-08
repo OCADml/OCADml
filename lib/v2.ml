@@ -196,5 +196,7 @@ let rotate ?about theta t =
   | None   -> rot t
 
 let[@inline] zrot ?about theta t = rotate ?about theta t
-let scale = mul
+let[@inline] scale a b = mul a b
+let[@inline] xscale s { x; y } = v (x *. s) y
+let[@inline] yscale s { x; y } = v x (y *. s)
 let mirror ax t = sub t (smul ax (2. *. (dot t ax /. dot ax ax)))

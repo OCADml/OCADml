@@ -318,4 +318,7 @@ val quaternion : ?about:V3.t -> Quaternion.t -> t -> t
 val axis_rotate : ?about:V3.t -> V3.t -> float -> t -> t
 val affine : Affine3.t -> t -> t
 val scale : V3.t -> t -> t
+val xscale : float -> t -> t
+val yscale : float -> t -> t
+val zscale : float -> t -> t
 val mirror : V3.t -> t -> t

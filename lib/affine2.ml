@@ -194,6 +194,9 @@ let scale { x; y } =
   ; r2c2 = 1.
   }
 
+let[@inline] xscale x = scale (v2 x 1.)
+let[@inline] yscale y = scale (v2 1. y)
+
 let mirror ax =
   let { x; y } = V2.normalize ax in
   let xx = 1. -. (2. *. x *. x)

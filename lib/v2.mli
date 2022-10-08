@@ -88,6 +88,16 @@ val ytrans : float -> t -> t
     Scale [t] by factors [s]. Equivalent to {!val:mul}. *)
 val scale : t -> t -> t
 
+(** [xscale x t]
+
+    Scale [t] by the factor [x] on the x-axis. *)
+val xscale : float -> t -> t
+
+(** [yscale y t]
+
+    Scale [t] by the factor [y] on the y-axis. *)
+val yscale : float -> t -> t
+
 (** [mirror ax t]
 
     Mirrors [t] on a plane through the origin, defined by the normal vector [ax]. *)

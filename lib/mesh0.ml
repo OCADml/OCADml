@@ -511,4 +511,7 @@ let quaternion ?about q t = { t with points = Path3.quaternion ?about q t.points
 let axis_rotate ?about ax r = quaternion ?about (Quaternion.make ax r)
 let affine m t = { t with points = Path3.affine m t.points }
 let scale s t = { t with points = Path3.scale s t.points }
+let xscale x t = { t with points = Path3.xscale x t.points }
+let yscale y t = { t with points = Path3.yscale y t.points }
+let zscale z t = { t with points = Path3.zscale z t.points }
 let mirror ax t = rev_faces { t with points = Path3.mirror ax t.points }

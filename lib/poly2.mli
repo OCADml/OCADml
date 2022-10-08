@@ -184,5 +184,7 @@ val ytrans : float -> t -> t
 val rotate : ?about:V2.t -> float -> t -> t
 val zrot : ?about:V2.t -> float -> t -> t
 val scale : V2.t -> t -> t
+val xscale : float -> t -> t
+val yscale : float -> t -> t
 val mirror : V2.t -> t -> t
 val affine : Affine2.t -> t -> t

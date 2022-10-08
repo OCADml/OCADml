@@ -470,6 +470,10 @@ let scale { x; y; z } =
   ; r3c3 = 1.
   }
 
+let[@inline] xscale x = scale (v3 x 1. 1.)
+let[@inline] yscale y = scale (v3 1. y 1.)
+let[@inline] zscale z = scale (v3 1. 1. z)
+
 let mirror ax =
   let { x; y; z } = V3.normalize ax in
   let xx = 1. -. (2. *. x *. x)

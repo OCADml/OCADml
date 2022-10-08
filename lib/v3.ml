@@ -225,5 +225,8 @@ let[@inline] xtrans d { x; y; z } = v (x +. d) y z
 let[@inline] ytrans d { x; y; z } = v x (y +. d) z
 let[@inline] ztrans d { x; y; z } = v x y (z +. d)
 let[@inline] scale a b = mul a b
+let[@inline] xscale s { x; y; z } = v (x *. s) y z
+let[@inline] yscale s { x; y; z } = v x (y *. s) z
+let[@inline] zscale s { x; y; z } = v x y (z *. s)
 let mirror ax t = sub t (smul ax (2. *. (dot t ax /. dot ax ax)))
 let projection { x; y; _ } = { x; y; z = 0. }

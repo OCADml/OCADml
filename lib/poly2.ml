@@ -155,5 +155,7 @@ let ytrans y = map (Path2.ytrans y)
 let rotate ?about r = map (Path2.rotate ?about r)
 let[@inline] zrot ?about r t = rotate ?about r t
 let scale s = map (Path2.scale s)
+let xscale x = map (Path2.xscale x)
+let yscale y = map (Path2.yscale y)
 let mirror ax = map (Path2.mirror ax)
 let affine m = map (Path2.affine m)

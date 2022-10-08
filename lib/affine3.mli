@@ -49,6 +49,21 @@ val of_row_matrix : float array array -> (t, string) result
     Create an affine transformation matrix from the xyz scaling vector [v]. *)
 val scale : V3.t -> t
 
+(** [xscale x]
+
+    Create a 2d affine transformation matrix that applies x-axis scaling. *)
+val xscale : float -> t
+
+(** [yscale y]
+
+    Create a 2d affine transformation matrix that applies y-axis scaling. *)
+val yscale : float -> t
+
+(** [zscale z]
+
+    Create a 2d affine transformation matrix that applies z-axis scaling. *)
+val zscale : float -> t
+
 (** [translate v]
 
     Create an affine transformation matrix from the xyz translation vector [v]. *)

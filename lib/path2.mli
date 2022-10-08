@@ -289,4 +289,6 @@ val affine3 : Affine3.t -> t -> V3.t list
 val quaternion : ?about:V3.t -> Quaternion.t -> t -> V3.t list
 val axis_rotate : ?about:V3.t -> V3.t -> float -> t -> V3.t list
 val scale : V2.t -> t -> t
+val xscale : float -> t -> t
+val yscale : float -> t -> t
 val mirror : V2.t -> t -> t
