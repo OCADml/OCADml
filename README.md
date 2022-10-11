@@ -24,6 +24,6 @@ may be helpful to check out a library utilizing them.
 There is a companion ppx, [\[@@deriving
 cad\]](https://github.com/OCADml/ppx_deriving_cad) for generating
 transformation functions for user-defined records and abstract types made up of
-CAD specific types such as [OSCADml's](https://github.io/OSCADml) `Scad.t`,
+CAD specific types such as [OSCADml](https://github.com/OSCADml)'s `Scad.t`,
 along with their corresponding vector (`V2.t` or `V3.t`) types (and those
 composed of them) provided in this library.
