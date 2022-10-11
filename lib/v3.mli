@@ -84,17 +84,17 @@ val scale : t -> t -> t
 
 (** [xscale x t]
 
-    Scale [t] by the factor [x] on the x-axis. *)
+    Scale [t] by the factor [x] in the x-dimension. *)
 val xscale : float -> t -> t
 
 (** [yscale y t]
 
-    Scale [t] by the factor [y] on the y-axis. *)
+    Scale [t] by the factor [y] in the y-dimension. *)
 val yscale : float -> t -> t
 
 (** [zscale z t]
 
-    Scale [t] by the factor [z] on the z-axis. *)
+    Scale [t] by the factor [z] in the z-dimension. *)
 val zscale : float -> t -> t
 
 (** [mirror ax t]
