@@ -29,7 +29,7 @@ type style =
   ]
 
 let empty = { n_points = 0; points = []; faces = [] }
-let n_points t = t.n_points
+let size t = t.n_points
 let points t = t.points
 let faces t = t.faces
 let make ~points ~faces = { n_points = List.length points; points; faces }

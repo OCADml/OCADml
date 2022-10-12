@@ -6,11 +6,7 @@
     the {{:https://github.com/revarbat/BOSL2/} BOSL2 OpenSCAD library}. *)
 
 (** Points and faces 3-dimensional mesh. *)
-type t = Mesh0.t = private
-  { n_points : int
-  ; points : V3.t list
-  ; faces : int list list
-  }
+type t = Mesh0.t
 
 (** {1 Basic Constructors }*)
 
@@ -22,6 +18,12 @@ val empty : t
     Create a mesh [t] from a list of {!V3.t} [points], and a list of [faces]
     described by indices into [points]. *)
 val make : points:V3.t list -> faces:int list list -> t
+
+(** {1 Accessors} *)
+
+val size : t -> int
+val points : t -> V3.t list
+val faces : t -> int list list
 
 (** {1 Low-level Generators} *)
 
