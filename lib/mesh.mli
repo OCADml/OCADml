@@ -45,6 +45,15 @@ type style =
   | `Concave
   ]
 
+(** [prune_rows ?min_dist rows]
+
+    Filter [rows] such that each row polygon is at least [min_dist] (default [0.05])
+    above the plane of the previous polygon, indicating the dropped indices.
+    This can be useful for avoiding self-intersections in the output of {!of_rows}.
+    Note that all polygons in [rows] must be planar, else [Failure] will be
+    raised. *)
+val prune_rows : ?min_dist:float -> Path3.t -> int list * Path3.t
+
 (** [of_rows ?rev ?endcaps ?col_wrap ?style rows]
 
     Create a {!type:t} representing a polyhedron from a list of layers

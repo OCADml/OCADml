@@ -34,6 +34,20 @@ let points t = t.points
 let faces t = t.faces
 let make ~points ~faces = { n_points = List.length points; points; faces }
 
+let prune_rows ?(min_dist = 0.05) = function
+  | [] -> [], []
+  | [ _ ] as rows -> [], rows
+  | hd :: rows ->
+    let f (drop, keep, i, plane) row =
+      let valid = List.for_all (Plane.is_point_above ~eps:min_dist plane) row in
+      if valid
+      then drop, row :: keep, i + 1, Path3.to_plane row
+      else i :: drop, keep, i + 1, plane
+    in
+    let plane = Path3.to_plane hd in
+    let drop, keep, _, _ = List.fold_left f ([], [ hd ], 1, plane) rows in
+    List.rev drop, List.rev keep
+
 let of_rows
     ?(rev = false)
     ?(endcaps = `Both)
@@ -44,11 +58,11 @@ let of_rows
   let looped =
     match endcaps with
     | `Loop -> true
-    | _     -> false
+    | _ -> false
   in
   match layers with
-  | []       -> empty
-  | [ _ ]    -> invalid_arg "Only one layer provided."
+  | [] -> empty
+  | [ _ ] -> invalid_arg "Only one layer provided."
   | hd :: tl ->
     let n_layers = List.length layers
     and n_facets = List.length hd in
@@ -78,7 +92,7 @@ let of_rows
           else loop acc r (c + 1)
         in
         List.append points (List.rev @@ loop [] 0 0)
-      | _         -> points
+      | _ -> points
     in
     let faces =
       let ps = Array.of_list points in
@@ -98,7 +112,7 @@ let of_rows
       in
       let f =
         match style with
-        | `Quincunx                   ->
+        | `Quincunx ->
           let n = n_layers * n_facets in
           fun acc r c ->
             let i1, i2, i3, i4 = idxs r c
@@ -107,11 +121,11 @@ let of_rows
             |> add_face i2 i5 i3
             |> add_face i3 i5 i4
             |> add_face i4 i5 i1
-        | `Alt                        ->
+        | `Alt ->
           fun acc r c ->
             let i1, i2, i3, i4 = idxs r c in
             add_faces false acc i1 i2 i3 i4
-        | `MinEdge                    ->
+        | `MinEdge ->
           fun acc r c ->
             let i1, i2, i3, i4 = idxs r c in
             let default = V3.(distance ps.(i4) ps.(i2) <= distance ps.(i1) ps.(i3)) in
@@ -121,7 +135,7 @@ let of_rows
           let side =
             match con with
             | `Convex -> Fun.id
-            | _       -> not
+            | _ -> not
           in
           fun acc r c ->
             let i1, i2, i3, i4 = idxs r c in
@@ -132,7 +146,7 @@ let of_rows
             if Math.approx n.z 0.
             then add_face i1 i4 i3 acc
             else add_faces (side V3.(dot n ps.(i4) > dot n ps.(i1))) acc i1 i2 i3 i4
-        | `Default                    ->
+        | `Default ->
           fun acc r c ->
             let i1, i2, i3, i4 = idxs r c in
             add_faces true acc i1 i2 i3 i4
@@ -152,10 +166,10 @@ let of_rows
         List.init n_facets f
       in
       match endcaps with
-      | `Both         -> top_cap :: bottom_cap :: faces
+      | `Both -> top_cap :: bottom_cap :: faces
       | `None | `Loop -> faces
-      | `Top          -> top_cap :: faces
-      | `Bot          -> bottom_cap :: faces
+      | `Top -> top_cap :: faces
+      | `Bot -> bottom_cap :: faces
     in
     { n_points = n_layers * n_facets; points; faces }
 
@@ -171,23 +185,23 @@ let of_ragged ?(looped = false) ?(rev = false) rows =
   in
   match starts_lenghts with
   | [] | [ _ ] -> empty
-  | hd :: tl   ->
+  | hd :: tl ->
     let f ((start, len), faces) ((next_start, next_len) as next) =
       let faces =
         match next_len - len with
-        | 0     ->
+        | 0 ->
           let a i = [ i + start; i + start + 1; i + next_start ]
           and b i = [ i + start + 1; i + next_start + 1; i + next_start ] in
           Util.prepend_init (len - 1) a faces |> Util.prepend_init (len - 1) b
-        | 1     ->
+        | 1 ->
           let a i = [ i + start; i + start + 1; i + next_start + 1 ]
           and b i = [ i + start; i + next_start + 1; i + next_start ] in
           Util.prepend_init (len - 1) a faces |> Util.prepend_init len b
-        | -1    ->
+        | -1 ->
           let a i = [ i + start + 1; i + next_start + 1; i + next_start ]
           and b i = [ i + start; i + start + 1; i + next_start ] in
           Util.prepend_init (len - 2) a faces |> Util.prepend_init (len - 1) b
-        | 2     ->
+        | 2 ->
           let count = Float.(to_int @@ floor @@ ((of_int len -. 1.) /. 2.)) in
           let a i = [ i + start; i + start + 1; i + next_start + 1 ]
           and b i =
@@ -202,7 +216,7 @@ let of_ragged ?(looped = false) ?(rev = false) rows =
           |> Util.prepend_init (len - count - 1) b
           |> Util.prepend_init (count + 1) c
           |> Util.prepend_init (next_len - 2 - count) d
-        | -2    ->
+        | -2 ->
           let count = Float.(to_int @@ floor @@ ((of_int len -. 1.) /. 2.)) in
           let a i = [ i + next_start; i + start + 1; i + next_start + 1 ]
           and b i =
@@ -234,7 +248,7 @@ let of_ragged ?(looped = false) ?(rev = false) rows =
           if not_degen i0 i1 && not_degen i1 i2 && not_degen i2 i0
           then if rev then Some [ i2; i1; i0 ] else Some face
           else None
-        | _                      -> failwith "unreachable"
+        | _ -> failwith "unreachable"
       in
       List.filter_map cull_degenerate all_faces
     in
@@ -257,13 +271,13 @@ let of_path3 ?(rev = false) layer =
 
 let of_poly2 ?rev = function
   | Poly2.{ outer; holes = [] } -> of_path2 ?rev outer
-  | Poly2.{ outer; holes }      ->
+  | Poly2.{ outer; holes } ->
     let points, faces = PolyHoles.partition ?rev ~holes outer in
     make ~points ~faces
 
 let of_poly3 ?rev = function
   | Poly3.{ outer; holes = [] } -> of_path3 ?rev outer
-  | Poly3.{ outer; holes }      ->
+  | Poly3.{ outer; holes } ->
     let plane = Plane.of_normal ~point:(List.hd outer) @@ Path3.normal outer in
     let project = Path3.project plane
     and lift = Plane.lift plane in
@@ -314,7 +328,7 @@ let merge_points ?(eps = Util.epsilon) { n_points; points; faces } =
       for i = 1 to len - 1 do
         match BallTree3.search_idxs ~radius:eps tree pts.(i) with
         | [] | [ _ ] -> () (* single result will be self *)
-        | hd :: tl   ->
+        | hd :: tl ->
           let min_match = List.fold_left Int.min hd tl in
           if i <> min_match then IntTbl.add drop i min_match
       done )
@@ -333,10 +347,10 @@ let merge_points ?(eps = Util.epsilon) { n_points; points; faces } =
       | Some idx ->
         lookup.(i) <- idx - offsets.(idx);
         incr off
-      | None     -> lookup.(i) <- i - !off
+      | None -> lookup.(i) <- i - !off
     done;
     let rec prune_face i first last acc = function
-      | [ hd ]   ->
+      | [ hd ] ->
         let hd' = lookup.(hd) in
         if hd' <> last && hd' <> first && i >= 2
         then Some (List.rev @@ (hd' :: acc))
@@ -348,10 +362,10 @@ let merge_points ?(eps = Util.epsilon) { n_points; points; faces } =
         if hd' <> last
         then prune_face (i + 1) first hd' (hd' :: acc) tl
         else prune_face i first last acc tl
-      | []       -> None
+      | [] -> None
     in
     let f acc = function
-      | []       -> acc
+      | [] -> acc
       | hd :: tl ->
         let hd' = lookup.(hd) in
         Util.prepend_opt (prune_face 1 hd' hd' [ hd' ] tl) acc
@@ -372,14 +386,13 @@ let volume { n_points; points; faces } =
     let rec sum_face total_vol p1 idxs =
       let calc total_vol p1 p2 p3 = V3.(dot (cross p3 p2) p1) +. total_vol in
       match idxs with
-      | [ i2; i3 ]              -> calc total_vol p1 pts.(i2) pts.(i3)
+      | [ i2; i3 ] -> calc total_vol p1 pts.(i2) pts.(i3)
       | i2 :: (i3 :: _ as rest) -> sum_face (calc total_vol p1 pts.(i2) pts.(i3)) p1 rest
-      | _                       -> invalid_arg
-                                     "Polyhedron contains face with fewer than 3 points."
+      | _ -> invalid_arg "Polyhedron contains face with fewer than 3 points."
     in
     let f total_vol = function
       | i1 :: idxs -> sum_face total_vol pts.(i1) idxs
-      | []         -> invalid_arg "Polyhedron contains empty face."
+      | [] -> invalid_arg "Polyhedron contains empty face."
     in
     List.fold_left f 0. faces /. 6. )
 
@@ -405,17 +418,16 @@ let centroid ?(eps = Util.epsilon) { n_points; points; faces } =
       vol +. total_vol, V3.add weighted_sum weighted
     in
     match idxs with
-    | [ i2; i3 ]              -> calc total_vol weighted_sum p1 pts.(i2) pts.(i3)
+    | [ i2; i3 ] -> calc total_vol weighted_sum p1 pts.(i2) pts.(i3)
     | i2 :: (i3 :: _ as rest) ->
       let total_vol, weighted_sum = calc total_vol weighted_sum p1 pts.(i2) pts.(i3) in
       sum_face total_vol weighted_sum p1 rest
-    | _                       -> invalid_arg
-                                   "Polyhedron contains face with fewer than 3 points."
+    | _ -> invalid_arg "Polyhedron contains face with fewer than 3 points."
   in
   let total_vol, weighted_sum =
     let f (total_vol, weighted_sum) = function
       | i1 :: idxs -> sum_face total_vol weighted_sum pts.(i1) idxs
-      | []         -> invalid_arg "Polyhedron contains empty face."
+      | [] -> invalid_arg "Polyhedron contains empty face."
     in
     List.fold_left f (0., V3.zero) faces
   in
@@ -426,8 +438,8 @@ let centroid ?(eps = Util.epsilon) { n_points; points; faces } =
 let enforce_winding w shape =
   let reverse =
     match w with
-    | `CCW     -> Path2.is_clockwise shape
-    | `CW      -> not @@ Path2.is_clockwise shape
+    | `CCW -> Path2.is_clockwise shape
+    | `CW -> not @@ Path2.is_clockwise shape
     | `NoCheck -> false
   in
   if reverse then List.rev shape else shape
@@ -447,14 +459,14 @@ end)
 
 let hull = function
   | [ _ ] | [ _; _ ] -> invalid_arg "Too few points (< 3) to hull."
-  | points           ->
+  | points ->
     let (a, b, c), plane =
       match Path3.noncollinear_triple points with
       | Some (idxs, (a, b, c)) -> idxs, Plane.make a b c
-      | None                   -> invalid_arg "Cannot hull collinear points."
+      | None -> invalid_arg "Cannot hull collinear points."
     and non_coplanar plane ps =
       let rec loop i = function
-        | []       -> None
+        | [] -> None
         | hd :: tl ->
           if not (Float.abs (Plane.distance_to_point plane hd) < Util.epsilon)
           then Some i
@@ -463,7 +475,7 @@ let hull = function
       loop 0 ps
     in
     ( match non_coplanar plane points with
-    | None   -> of_path3 @@ Path2.(lift plane @@ hull @@ Path3.project plane points)
+    | None -> of_path3 @@ Path2.(lift plane @@ hull @@ Path3.project plane points)
     | Some d ->
       let ps = Array.of_list points in
       let add_tri a b c ((triangles, planes) as acc) =

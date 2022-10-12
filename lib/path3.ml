@@ -10,7 +10,7 @@ let of_path2 ?(plane = Plane.xy) = Path2.lift plane
 let to_path2 ?(plane = Plane.xy) = List.map (Plane.project plane)
 
 let bbox = function
-  | []       -> invalid_arg "Cannot calculate bbox for empty path."
+  | [] -> invalid_arg "Cannot calculate bbox for empty path."
   | hd :: tl ->
     let f (bb : V3.bbox) p =
       let min = V3.lower_bounds bb.min p
@@ -49,7 +49,7 @@ let scaler ?ez dims =
     | Some (p1, p2) ->
       let ez = Easing.make p1 p2 in
       fun u -> V2.lerp (v2 1. 1.) dims (ez u)
-    | None          -> V2.lerp (v2 1. 1.) dims
+    | None -> V2.lerp (v2 1. 1.) dims
   in
   fun u -> Affine3.scale @@ V3.of_v2 ~z:1. @@ f u
 
@@ -59,7 +59,7 @@ let twister ?ez rot =
     | Some (p1, p2) ->
       let ez = Easing.make p1 p2 in
       fun u -> ez u *. rot
-    | None          -> ( *. ) rot
+    | None -> ( *. ) rot
   in
   fun u -> Quaternion.(to_affine @@ make (v3 0. 0. 1.) (f u))
 
@@ -96,7 +96,7 @@ let to_transforms ?(mode = `Auto) ?scale_ez ?twist_ez ?scale ?twist path =
         and az = Float.atan2 dy dx in
         let q = Quaternion.of_euler (v3 0. (-.ay) az) in
         Affine3.(m %> Quaternion.(to_affine ~trans:p.(i) q))
-    | _      ->
+    | _ ->
       let accum_qs =
         let local i =
           let p1 = p.(i)
@@ -105,8 +105,8 @@ let to_transforms ?(mode = `Auto) ?scale_ez ?twist_ez ?scale ?twist path =
           Quaternion.align V3.(normalize (p2 -@ p1)) V3.(normalize (p3 -@ p2))
         in
         match List.init (len - 2) local with
-        | []       -> [| Quaternion.id |]
-        | [ q ]    -> [| q; Quaternion.id |]
+        | [] -> [| Quaternion.id |]
+        | [ q ] -> [| q; Quaternion.id |]
         | hd :: tl ->
           let f (acc, qs) m =
             let q = Quaternion.mul m acc in
@@ -117,7 +117,7 @@ let to_transforms ?(mode = `Auto) ?scale_ez ?twist_ez ?scale ?twist path =
       in
       let init =
         match mode with
-        | `Auto          ->
+        | `Auto ->
           let cardinal =
             (* Determine an appropriate axis to pre-align the 2d shape with
                  (from normal of {x = 0.; y = 0.; z = 1.}), BEFORE alignment
@@ -138,16 +138,16 @@ let to_transforms ?(mode = `Auto) ?scale_ez ?twist_ez ?scale ?twist path =
               if Float.compare (Float.abs (a -. b)) 0.01 = 1 then Float.compare a b else 0
             in
             match comp abs_x abs_y, comp abs_x abs_z, comp abs_y abs_z with
-            | 1, 1, _   -> v3 sgn_x 0. 0. (* x-axis *)
-            | -1, _, 1  -> v3 0. sgn_y 0. (* y-axis *)
+            | 1, 1, _ -> v3 sgn_x 0. 0. (* x-axis *)
+            | -1, _, 1 -> v3 0. sgn_y 0. (* y-axis *)
             | 0, -1, -1 -> v3 0. 0. sgn_z (* xy equal, but less than z *)
-            | 0, _, _   -> v3 0. sgn_y 0. (* xy equal, roughly following plane *)
-            | _         -> v3 0. 0. sgn_z
+            | 0, _, _ -> v3 0. sgn_y 0. (* xy equal, roughly following plane *)
+            | _ -> v3 0. 0. sgn_z
           in
           let d = V3.normalize V3.(p.(1) -@ p.(0)) in
           Quaternion.(to_affine @@ mul (align cardinal d) (align (v3 0. 0. 1.) cardinal))
         | `Align initial -> Affine3.align initial (v3 0. 0. 1.)
-        | _              -> Affine3.id
+        | _ -> Affine3.id
       in
       fun i ->
         if i = 0
@@ -203,6 +203,18 @@ let helical_transforms
   in
   List.mapi f path
 
+let prune_transforms ?(min_dist = 0.05) ~shape = function
+  | [] -> []
+  | [ m ] -> [ 0, m ]
+  | m0 :: transforms ->
+    let f (acc, i, plane) m =
+      let s' = Path3.affine m (shape i) in
+      let valid = List.for_all (Plane.is_point_above ~eps:min_dist plane) s' in
+      if valid then (i, m) :: acc, i + 1, Path3.to_plane s' else acc, i + 1, plane
+    and plane = Path3.to_plane @@ Path3.affine m0 (shape 0) in
+    let transforms, _, _ = List.fold_left f ([ 0, m0 ], 1, plane) transforms in
+    List.rev transforms
+
 let normal = function
   | p0 :: p1 :: p2 :: poly ->
     let area_vec =
@@ -213,7 +225,7 @@ let normal = function
       fst @@ List.fold_left f (f (V3.zero, p1) p2) poly
     in
     V3.(normalize @@ neg area_vec)
-  | _                      -> invalid_arg "Too few points to calculate path normal."
+  | _ -> invalid_arg "Too few points to calculate path normal."
 
 let coplanar ?eps t =
   try Plane.are_points_on ?eps (Plane.of_normal @@ normal t) t with
@@ -221,19 +233,19 @@ let coplanar ?eps t =
   | Invalid_argument _ -> false
 
 let to_plane ?eps = function
-  | [ p0; p1; p2 ]  -> Plane.make p0 p1 p2
+  | [ p0; p1; p2 ] -> Plane.make p0 p1 p2
   | point :: _ as t ->
     let plane = Plane.of_normal ~point (normal t) in
     if Plane.are_points_on ?eps plane t
     then plane
     else invalid_arg "Path is not coplanar."
-  | _               -> invalid_arg "Path must contain at least 3 points to define a plane."
+  | _ -> invalid_arg "Path must contain at least 3 points to define a plane."
 
 let project plane = to_path2 ~plane
 
 let centroid ?(eps = Util.epsilon) = function
   | [] | [ _ ] | [ _; _ ] -> invalid_arg "Polygon must have more than two points."
-  | p0 :: p1 :: tl as t   ->
+  | p0 :: p1 :: tl as t ->
     let plane = to_plane t in
     if not @@ Plane.are_points_on ~eps plane t
     then invalid_arg "Polygon must be coplanar.";
@@ -249,7 +261,7 @@ let centroid ?(eps = Util.epsilon) = function
 
 let area ?(signed = false) = function
   | [] | [ _ ] | [ _; _ ] -> 0.
-  | p0 :: p1 :: tl as t   ->
+  | p0 :: p1 :: tl as t ->
     let plane = to_plane t in
     if not @@ Plane.are_points_on plane t then invalid_arg "Polygon must be coplanar.";
     let n = Plane.normal plane in

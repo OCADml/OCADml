@@ -292,6 +292,20 @@ val helical_transforms
   -> float
   -> Affine3.t list
 
+(** [prune_transforms ?min_dist ~shape transforms]
+
+    Filter [transforms] into [(idx, m)] pairs for which the polygon computed by
+    applying [m] to the corresponding shape (result of [shape idx],
+    allowing for scaling operations etc) is at least [min_dist] (default [0.05])
+    above the plane of the previous polygon. This can be useful for avoiding
+    self-intersections in the output of {!Mesh.sweep}. Note that all polygons
+    returned by [shape] must be planar, else [Failure] will be raised. *)
+val prune_transforms
+  :  ?min_dist:float
+  -> shape:(int -> t)
+  -> Affine3.t list
+  -> (int * Affine3.t) list
+
 (** {1 Path Matching / Vertex Association}
 
   Point duplicating strategies for associating vertices between incommensurate
