@@ -54,7 +54,7 @@ type style =
     This can be useful for avoiding self-intersections in the output of {!of_rows}.
     Note that all polygons in [rows] must be planar, else [Failure] will be
     raised. *)
-val prune_rows : ?min_dist:float -> Path3.t -> int list * Path3.t
+val prune_rows : ?min_dist:float -> Path3.t list -> int list * Path3.t list
 
 (** [of_rows ?rev ?endcaps ?col_wrap ?style rows]
 

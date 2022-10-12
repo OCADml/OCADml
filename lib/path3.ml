@@ -203,18 +203,6 @@ let helical_transforms
   in
   List.mapi f path
 
-let prune_transforms ?(min_dist = 0.05) ~shape = function
-  | [] -> []
-  | [ m ] -> [ 0, m ]
-  | m0 :: transforms ->
-    let f (acc, i, plane) m =
-      let s' = Path3.affine m (shape i) in
-      let valid = List.for_all (Plane.is_point_above ~eps:min_dist plane) s' in
-      if valid then (i, m) :: acc, i + 1, Path3.to_plane s' else acc, i + 1, plane
-    and plane = Path3.to_plane @@ Path3.affine m0 (shape 0) in
-    let transforms, _, _ = List.fold_left f ([ 0, m0 ], 1, plane) transforms in
-    List.rev transforms
-
 let normal = function
   | p0 :: p1 :: p2 :: poly ->
     let area_vec =
@@ -293,3 +281,15 @@ let xscale x = List.map (V3.xscale x)
 let yscale y = List.map (V3.yscale y)
 let zscale z = List.map (V3.zscale z)
 let mirror ax = List.map (V3.mirror ax)
+
+let prune_transforms ?(min_dist = 0.05) ~shape = function
+  | [] -> []
+  | [ m ] -> [ 0, m ]
+  | m0 :: transforms ->
+    let f (acc, i, plane) m =
+      let s' = affine m (shape i) in
+      let valid = List.for_all (Plane.is_point_above ~eps:min_dist plane) s' in
+      if valid then (i, m) :: acc, i + 1, to_plane s' else acc, i + 1, plane
+    and plane = to_plane @@ affine m0 (shape 0) in
+    let transforms, _, _ = List.fold_left f ([ 0, m0 ], 1, plane) transforms in
+    List.rev transforms
