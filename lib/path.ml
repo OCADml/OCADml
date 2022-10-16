@@ -210,13 +210,13 @@ module Make (V : V.S) = struct
 
   let length ?(closed = false) = function
     | [] | [ _ ] -> 0.
-    | hd :: tl   ->
+    | hd :: tl ->
       let f (sum, last) p = sum +. V.distance p last, p in
       let sum, last = List.fold_left f (0., hd) tl in
       if closed then sum +. V.distance last hd else sum
 
   let cummulative_length ?(closed = false) = function
-    | []       -> []
+    | [] -> []
     | hd :: tl ->
       let f (acc, sum, last) p =
         let sum = sum +. V.distance p last in
@@ -240,7 +240,7 @@ module Make (V : V.S) = struct
       travels )
 
   let segment_lengths ?(closed = false) = function
-    | []       -> []
+    | [] -> []
     | hd :: tl ->
       let f (acc, last) p = V.distance p last :: acc, p in
       let lengths, last = List.fold_left f ([], hd) tl in
@@ -278,7 +278,7 @@ module Make (V : V.S) = struct
   let resample ~freq path =
     let n =
       match freq with
-      | `N n       -> n
+      | `N n -> n
       | `Spacing s -> Int.of_float @@ (length path /. s)
     in
     if n < 0 then invalid_arg "Resampling frequency must be positive.";
@@ -310,11 +310,11 @@ module Make (V : V.S) = struct
       | freq ->
         let exact, density_by, n =
           match freq with
-          | `N (n, by)                -> true, by, n
-          | `RoughN (n, by)           -> false, by, n
-          | `Refine (factor, by)      -> true, by, len * factor
+          | `N (n, by) -> true, by, n
+          | `RoughN (n, by) -> false, by, n
+          | `Refine (factor, by) -> true, by, len * factor
           | `RoughRefine (factor, by) -> false, by, len * factor
-          | _                         -> failwith "`Spacing is unreachable."
+          | _ -> failwith "`Spacing is unreachable."
         in
         if n < len
         then
@@ -355,7 +355,7 @@ module Make (V : V.S) = struct
 
   let cut ?(closed = false) ~distances = function
     | [] | [ _ ] -> invalid_arg "Path must have more than one point to be cut."
-    | path       ->
+    | path ->
       let path = Array.of_list path in
       let travels = cummulative_length' ~closed path in
       let len = Array.length path
@@ -422,10 +422,10 @@ module Make (V : V.S) = struct
     in
     match cut ?closed ~distances path with
     | [ a; b ] -> a, b
-    | _        -> failwith "impossible"
+    | _ -> failwith "impossible"
 
   let noncollinear_triple ?(eps = Util.epsilon) = function
-    | [] | [ _ ] | [ _; _ ]   -> None
+    | [] | [ _ ] | [ _; _ ] -> None
     | hd :: (p :: tl as rest) ->
       let _, furthest_idx, furthest_point, dist =
         let f (i, idx, fp, dist) p =
@@ -475,16 +475,16 @@ module Make (V : V.S) = struct
       ?(keep = `First)
       ?(eq = V.approx ~eps:Util.epsilon)
     = function
-    | []            -> []
+    | [] -> []
     | [ a; b ] as l ->
       ( match eq a b, keep with
       | true, `First -> [ a ]
-      | true, `Last  -> [ b ]
-      | _            -> l )
+      | true, `Last -> [ b ]
+      | _ -> l )
     | first :: rest ->
       let final last acc = if closed && eq first last then acc else last :: acc in
       let rec loop acc is_first last = function
-        | [ hd ]   ->
+        | [ hd ] ->
           ( match eq hd last, keep with
           | true, `First -> final last acc
           | true, (`Last | `LastAndEnds | `FirstAndEnds) -> final hd acc
@@ -495,7 +495,7 @@ module Make (V : V.S) = struct
           | true, true, `LastAndEnds -> loop acc is_first last tl
           | true, _, `Last | true, false, `LastAndEnds -> loop acc is_first hd tl
           | false, _, _ -> loop (last :: acc) false hd tl )
-        | []       -> failwith "unreachable"
+        | [] -> failwith "unreachable"
       in
       List.rev (loop [] true first rest)
 

@@ -1,8 +1,12 @@
 open V
 
-exception SelfIntersection of int
-exception CrossIntersection of int * int
-exception DuplicatePoints
+type invalid =
+  [ `SelfIntersection of int
+  | `CrossIntersection of int * int
+  | `DuplicatePoints
+  ]
+
+exception InvalidPoly of invalid
 
 type t =
   { outer : V2.t list
@@ -15,7 +19,8 @@ let validation ?(eps = Util.epsilon) = function
     let paths = Array.map Array.of_list (Array.of_list (outer :: holes)) in
     Array.iteri
       (fun i p ->
-        if not @@ APath2.is_simple ~eps ~closed:true p then raise (SelfIntersection i) )
+        if not @@ APath2.is_simple ~eps ~closed:true p
+        then raise (InvalidPoly (`SelfIntersection i)) )
       paths;
     (* check for intersections *)
     let n = Array.length paths
@@ -52,7 +57,7 @@ let validation ?(eps = Util.epsilon) = function
                         s1
                         V2.{ a = p2.(j); b = p2.(Util.index_wrap ~len:len_p2 (j + 1)) }
                       |> Option.is_some
-                then raise (CrossIntersection (!p1_idx, !p2_idx));
+                then raise (InvalidPoly (`CrossIntersection (!p1_idx, !p2_idx)));
                 last_signal := signal )
             done;
             incr p2_idx
@@ -68,7 +73,7 @@ let validation ?(eps = Util.epsilon) = function
     then
       for i = 0 to len - 2 do
         for j = i + 1 to len - 1 do
-          if V2.approx ~eps pts.(i) pts.(j) then raise DuplicatePoints
+          if V2.approx ~eps pts.(i) pts.(j) then raise (InvalidPoly `DuplicatePoints)
         done
       done
     else (
@@ -76,7 +81,7 @@ let validation ?(eps = Util.epsilon) = function
       for i = 1 to len - 1 do
         match BallTree2.search_idxs ~radius:eps tree pts.(i) with
         | [] | [ _ ] -> () (* single result will be self *)
-        | _          -> raise DuplicatePoints
+        | _ -> raise (InvalidPoly `DuplicatePoints)
       done )
 
 let is_simple ?eps t =
@@ -90,7 +95,7 @@ let make ?(validate = true) ?(holes = []) outer =
   let rewind =
     match holes with
     | [] -> Fun.id
-    | _  ->
+    | _ ->
       let outer_sign = Path2.clockwise_sign outer in
       fun p -> if Path2.clockwise_sign p = outer_sign then List.rev p else p
   in
@@ -142,7 +147,7 @@ let area ?signed { outer; holes } =
   and inside = List.fold_left (fun sum h -> Path2.area ?signed h +. sum) 0. holes in
   match signed with
   | Some true -> outside +. inside
-  | _         -> outside -. inside
+  | _ -> outside -. inside
 
 let map f { outer; holes } = { outer = f outer; holes = List.map f holes }
 

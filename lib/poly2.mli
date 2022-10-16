@@ -2,24 +2,21 @@
    Includes basic shape creation helpers, manipulations, (including offset and
    basic transformations), measurement, and validation. *)
 
-(** [SelfIntersection i]
+type invalid =
+  [ `SelfIntersection of int
+    (** Raised during polygon validation if a path is found to self-intersect. The
+       index refers to the culprit path (outer = [0], with holes increasing). *)
+  | `CrossIntersection of int * int
+    (** Raised during polygon validation if two paths are found to intersect
+          eachother. The indices refer to the paths in question (outer =
+          [0], with holes increasing). *)
+  | `DuplicatePoints
+    (** Raised during polygon validation if there are any duplicate points across
+          all of the paths contained within {!type:t}. *)
+  ]
 
-    Raised during polygon validation if a path is found to self-intersect. The
-    index [i] refers to the culprit path (outer = [0], with holes increasing). *)
-exception SelfIntersection of int
-
-(** [CrossIntersection (i, j)]
-
-    Raised during polygon validation if two paths are found to intersect
-    eachother. The indices [i] and [j] refer to the paths in question
-    (outer = [0], with holes increasing). *)
-exception CrossIntersection of int * int
-
-(** [DuplicatePoints]
-
-    Raised during polygon validation if there are any duplicate points across
-    all of the paths contained within {!type:t}. *)
-exception DuplicatePoints
+(** Exception raised on validation failure (see {!invalid} for reasons) *)
+exception InvalidPoly of invalid
 
 (** 2-dimensional polygon
 
