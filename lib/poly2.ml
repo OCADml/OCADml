@@ -8,6 +8,26 @@ type invalid =
 
 exception InvalidPoly of invalid
 
+let invalid_printer exn =
+  let path idx =
+    if idx = 0 then "outer path" else Printf.sprintf "hole path at index %i" (idx - 1)
+  and prelude = "Poly2 validation failed due to" in
+  match exn with
+  | InvalidPoly (`SelfIntersection i) ->
+    Some (Printf.sprintf "%s self-intersection within the %s." prelude (path i))
+  | InvalidPoly (`CrossIntersection (i, j)) ->
+    Some
+      (Printf.sprintf
+         "%s cross-intersection between the %s and the %s."
+         prelude
+         (path i)
+         (path j) )
+  | InvalidPoly `DuplicatePoints ->
+    Some (Printf.sprintf "%s presence of duplicate points (across all paths)." prelude)
+  | _ -> None
+
+let () = Printexc.register_printer invalid_printer
+
 type t =
   { outer : V2.t list
   ; holes : V2.t list list

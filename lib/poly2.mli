@@ -5,7 +5,7 @@
 type invalid =
   [ `SelfIntersection of int
     (** Raised during polygon validation if a path is found to self-intersect. The
-       index refers to the culprit path (outer = [0], with holes increasing). *)
+          index refers to the culprit path (outer = [0], with holes increasing). *)
   | `CrossIntersection of int * int
     (** Raised during polygon validation if two paths are found to intersect
           eachother. The indices refer to the paths in question (outer =
@@ -52,9 +52,8 @@ val add_holes : ?validate:bool -> holes:V2.t list list -> t -> t
     checks are performed with the tolerance [eps]. If valid, unit will be
     returned, otherwise an exception will be raised.
 
-    @raise SelfIntersection if any paths in [t] self-intersect.
-    @raise CrossIntersection if any two paths in [t] intersect eachother.
-    @raise DuplicatePoints if there are any duplicate points in [t]. *)
+    @raise InvalidPoly if any paths in [t] self-intersect, there are
+    cross-intersections between them, or if there are duplicate points. *)
 val validation : ?eps:float -> t -> unit
 
 (** [is_simple ?eps t]
