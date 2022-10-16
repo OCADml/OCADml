@@ -33,7 +33,7 @@ let self_intersections ?(eps = Util.epsilon) ?(closed = false) path =
         if Float.abs v >= eps
         then (
           let signal = Int.of_float @@ Math.sign v in
-          if signal * !last_signal < 0
+          if signal * !last_signal <= 0
           then (
             let l2 = V2.{ a = path.(j + start); b = path.(w (j + start + 1)) } in
             let intersect =

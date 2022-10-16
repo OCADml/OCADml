@@ -49,7 +49,7 @@ let validation ?(eps = Util.epsilon) = function
               if Float.abs v >= eps
               then (
                 let signal = Int.of_float @@ Math.sign v in
-                if signal * !last_signal < 0
+                if signal * !last_signal <= 0
                    && V2.line_intersection
                         ~eps
                         ~bounds1:(true, true)
