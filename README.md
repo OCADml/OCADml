@@ -42,6 +42,6 @@ so as to be more generally useful.
 
 Module organization and implementations borrow heavily
 from existing libraries in the OpenSCAD community:
-- [BOSL2](https://github.com/revarbat/BOSL2),
+- [BOSL2](https://github.com/revarbat/BOSL2)
 - [dotSCAD](https://github.com/JustinSDK/dotSCAD/tree/master/src)
 - [PlotFunction](https://github.com/rcolyer/plot-function)
