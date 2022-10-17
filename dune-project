@@ -21,6 +21,6 @@
  (description "Types and functions for building CAD packages in OCaml")
  (depends
   (ocaml
-   (>= 4.08.0))
+   (>= 4.13.0))
   (cairo2
    (>= 0.6.2))))

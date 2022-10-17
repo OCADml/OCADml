@@ -10,7 +10,7 @@ doc: "https://OCADml.github.io/OCADml"
 bug-reports: "https://github.com/OCADml/OCADml/issues"
 depends: [
   "dune" {>= "3.3"}
-  "ocaml" {>= "4.08.0"}
+  "ocaml" {>= "4.13.0"}
   "cairo2" {>= "0.6.2"}
   "odoc" {with-doc}
 ]
