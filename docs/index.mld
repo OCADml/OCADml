@@ -1,7 +1,8 @@
 {0 OCADml}
 
-   OCADml is a collection of types and functions facilitating Computer Aided
-   Design (CAD) in OCAml.
+OCADml is a collection of types and functions facilitating Computer Aided
+Design (CAD) in OCaml. In particular, the style of design currently supported is
+that of 2D drawing and mesh generation via sweeping/extrusion.
 
 {1:api API}
 
@@ -33,3 +34,22 @@
 - {{!OCADml.Math} [Math]} -- float and 2d matrix operations
 - {{!OCADml.BallTree2} [BallTree2]} -- 2d vector space partitioning search tree
 - {{!OCADml.BallTree3} [BallTree3]} -- 3d vector space partitioning search tree
+
+{1:cad CAD Package Specific Frontends}
+
+This library only provides a means to generate point and face based geometries,
+in order to perform boolean operations, validation, and export, you'll need to
+work with a particular CAD package.
+
+{2 OSCADml}
+- {{:https://github.io/OSCADml } github}
+- {{:https://ocadml.github.io/OSCADml/OSCADml/index.html} docs}
+- {{:https://ocadml.github.io/OSCADml/OSCADml/index.html#examples} examples}
+
+{1:ppx \[@@deriving cad\]}
+
+There is a companion ppx, {{:https://github.com/OCADml/ppx_deriving_cad} \[@@deriving cad\]}
+for generating transformation functions for user-defined records and abstract
+types composed of types for which the basic transformation functions are
+defined, such as vectors ({{!OCADml.V2.t} [V2.t]} or {{!OCADml.V3.t} [V3.t]})
+(and those composed of them) provided in this library.

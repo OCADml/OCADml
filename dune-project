@@ -1,9 +1,5 @@
 (lang dune 3.3)
 
-(using directory-targets 0.1)
-
-(cram enable)
-
 (name OCADml)
 
 (generate_opam_files true)
@@ -21,8 +17,8 @@
 
 (package
  (name OCADml)
- (synopsis "Types and utilities for building CAD packages in OCaml.")
- (description "Types and utilities for building CAD packages in OCaml.")
+ (synopsis "Types and functions for building CAD packages in OCaml")
+ (description "Types and functions for building CAD packages in OCaml")
  (depends
   (ocaml
    (>= 4.08.0))
