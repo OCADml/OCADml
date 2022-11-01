@@ -816,6 +816,11 @@ val join : t list -> t
     Eliminate duplicate points (less than [eps] distance apart) from [t]. *)
 val merge_points : ?eps:float -> t -> t
 
+(** [drop_unused_points t]
+
+    Drop unreferenced points (not included in any face) from the mesh [t]. *)
+val drop_unused_points : t -> t
+
 (** [add_face face t]
 
     Add a single face to the mesh [t]. *)

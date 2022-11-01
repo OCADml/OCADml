@@ -5,6 +5,8 @@ module IntTbl = Hashtbl.Make (struct
   let hash = Fun.id
 end)
 
+module IntSet = Set.Make (Int)
+
 type t =
   { n_points : int
   ; points : V3.t list
@@ -373,6 +375,26 @@ let merge_points ?(eps = Util.epsilon) { n_points; points; faces } =
     List.fold_left f [] faces
   in
   { n_points = n_points - IntTbl.length drop; points; faces }
+
+let drop_unused_points { n_points; points; faces } =
+  let keep = Array.make n_points false
+  and remap = Array.make n_points 0
+  and count = ref 0 in
+  let () =
+    let add_face s face = List.fold_left (fun s i -> IntSet.add i s) s face in
+    let set = List.fold_left add_face IntSet.empty faces in
+    for i = 0 to n_points - 1 do
+      if IntSet.mem i set
+      then begin
+        keep.(i) <- true;
+        remap.(i) <- !count;
+        incr count
+      end
+    done
+  in
+  let points = List.filteri (fun i _ -> keep.(i)) points
+  and faces = List.map (List.map (fun i -> remap.(i))) faces in
+  { n_points = !count; points; faces }
 
 let add_face face t = { t with faces = face :: t.faces }
 let add_faces faces t = { t with faces = List.rev_append faces t.faces }
