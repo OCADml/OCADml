@@ -398,6 +398,24 @@ let drop_unused_points { n_points; points; faces } =
 
 let rev_faces t = { t with faces = List.map List.rev t.faces }
 
+(* TODO: optimize by adding APath3 util module with relevant functions *)
+
+let triangulate ?eps { n_points; points; faces } =
+  let pts = Array.of_list points in
+  let f faces = function
+    | [ _; _; _ ] as face -> face :: faces
+    | face ->
+      let face = Array.of_list face in
+      let poly = List.init (Array.length face) (fun i -> pts.(face.(i))) in
+      let norm = Path3.normal poly in
+      let plane = Plane.of_normal ~point:pts.(face.(0)) norm in
+      let poly = Array.of_list (Path3.project plane poly) in
+      Triangulate.triangulate ?eps poly
+      |> List.map (List.map (fun i -> face.(i)))
+      |> List.rev_append faces
+  in
+  { n_points; points; faces = List.fold_left f [] faces }
+
 let volume { n_points; points; faces } =
   if n_points = 0
   then 0.

@@ -821,6 +821,12 @@ val merge_points : ?eps:float -> t -> t
     Drop unreferenced points (not included in any face) from the mesh [t]. *)
 val drop_unused_points : t -> t
 
+(** [triangulate ?eps t]
+
+    Triangulate the faces of the mesh [t]. If provided, [eps] is used
+    for duplicate point and collinearity checks. *)
+val triangulate : ?eps:float -> t -> t
+
 (** [rev_faces t]
 
     Flip all faces of the mesh [t]. *)
