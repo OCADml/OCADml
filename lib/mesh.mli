@@ -823,8 +823,9 @@ val drop_unused_points : t -> t
 
 (** [triangulate ?eps t]
 
-    Triangulate the faces of the mesh [t]. If provided, [eps] is used
-    for duplicate point and collinearity checks. *)
+    Triangulate the faces of the mesh [t]. Some degree of coplanarity in the
+    input faces can be fine, though too much  can cause triangulation to fail. If
+    provided, [eps] is used for duplicate point and collinearity checks. *)
 val triangulate : ?eps:float -> t -> t
 
 (** [rev_faces t]

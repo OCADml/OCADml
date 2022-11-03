@@ -109,6 +109,12 @@ let array_find_mapi f a =
   done;
   !res
 
+let map_inplace f a =
+  let len = Array.length a in
+  for i = 0 to len - 1 do
+    a.(i) <- f a.(i)
+  done
+
 let flatten_array m =
   let size = Array.fold_left (fun s r -> s + Array.length r) 0 m in
   if size > 0

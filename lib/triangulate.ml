@@ -80,7 +80,8 @@ let triangulate' ?eps poly idxs =
     else (
       match get_ear ?eps poly idxs with
       | None ->
-        failwith "Triangulation failed: the polygon either has twists, or is collinear."
+        failwith
+          "Triangulation failed: the polygon has twists, is collinear, or non-coplanar."
       | Some (`Degen ear) ->
         (* discard if degenerate and move on *)
         if len_idxs <= 4 then tris else loop tris (wrap_sub idxs (ear + 3) (len_idxs - 2))
@@ -90,19 +91,6 @@ let triangulate' ?eps poly idxs =
         loop (tri :: tris) idxs )
   in
   loop [] idxs
-
-(* NOTE: remember that 3d projections before using this can fail early if the
-    points fail coplanarity check, which and happen if there are duplicate
-    points. Go ahead and delete this note if it doesn't seem like it will come
-    up after testing with how this will be used/exposed. A note should
-    definitely be made in the doc comment for Mesh.triangulate about this not
-    working for meshes that have non-coplanar faces -- e.g. some uses of
-    of_rows and skin that create meshes that pass CGAL could fail the coplanar
-    checks when projecting the faces to 2d. Setting eps to a high value could
-    mitigate, but perhaps a param to allow bypassing this check may be useful
-    (could set the epsilon specifically for to_plane to infinity or something).
-    Should there be a param that lets you skip the coplanarity exception in
-    Path3.to_plane? *)
 
 let triangulate ?eps ?idxs poly =
   let len_poly = Array.length poly in
