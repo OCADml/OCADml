@@ -821,16 +821,6 @@ val merge_points : ?eps:float -> t -> t
     Drop unreferenced points (not included in any face) from the mesh [t]. *)
 val drop_unused_points : t -> t
 
-(** [add_face face t]
-
-    Add a single face to the mesh [t]. *)
-val add_face : int list -> t -> t
-
-(** [add_faces faces t]
-
-    Add a list of faces to the mesh [t]. *)
-val add_faces : int list list -> t -> t
-
 (** [rev_faces t]
 
     Flip all faces of the mesh [t]. *)

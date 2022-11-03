@@ -46,7 +46,7 @@ let none_inside ?eps poly idxs p0 p1 p2 =
 let get_ear ?eps poly idxs =
   let len_idxs = Array.length idxs in
   if len_idxs = 3
-  then `Ear 0
+  then Some (`Ear 0)
   else (
     let rec loop i =
       let p0 = poly.(idxs.(i))
@@ -54,7 +54,7 @@ let get_ear ?eps poly idxs =
       and p2 = poly.(idxs.((i + 2) mod len_idxs)) in
       if V2.clockwise_sign ?eps p0 p1 p2 > 0.
          && none_inside ?eps poly (wrap_sub idxs (i + 2) (len_idxs - 1)) p0 p1 p2
-      then `Ear i
+      then Some (`Ear i)
       else if i < len_idxs - 1
       then loop (i + 1)
       else (
@@ -62,14 +62,14 @@ let get_ear ?eps poly idxs =
         and j = ref 0 in
         while Option.is_none !whisker && !j < len_idxs do
           if V2.approx ?eps poly.(idxs.(!j)) poly.(idxs.((!j + 2) mod len_idxs))
-          then whisker := Some !j
+          then whisker := Some (`Degen !j)
           else incr j
         done;
-        Util.value_map_opt ~default:`None (fun e -> `Degen e) !whisker )
+        !whisker )
     in
     loop 0 )
 
-let triangulate ?eps poly idxs =
+let triangulate' ?eps poly idxs =
   let rec loop tris idxs =
     let len_idxs = Array.length idxs in
     if len_idxs = 3
@@ -79,15 +79,57 @@ let triangulate ?eps poly idxs =
       else [ idxs.(0); idxs.(1); idxs.(2) ] :: tris
     else (
       match get_ear ?eps poly idxs with
-      | `None ->
-        failwith "should just fail in get_ear (in bosl undef bubbles all the way up)"
-      | `Degen ear ->
+      | None ->
+        failwith "Triangulation failed: the polygon either has twists, or is collinear."
+      | Some (`Degen ear) ->
         if len_idxs <= 4 then tris else loop tris (wrap_sub idxs (ear + 3) (len_idxs - 2))
-      | `Ear ear ->
+      | Some (`Ear ear) ->
         let tri = List.init 3 (fun i -> (ear + i) mod len_idxs)
         and idxs = wrap_sub idxs (ear + 2) (len_idxs - 1) in
         loop (tri :: tris) idxs )
   in
   loop [] idxs
 
-let polygon_triangulate ?eps poly idxs = ()
+(* NOTE: remember that 3d projections before using this can fail early if the
+    points fail coplanarity check, which and happen if there are duplicate
+    points. Go ahead and delete this note if it doesn't seem like it will come
+    up after testing with how this will be used/exposed. A note should
+    definitely be made in the doc comment for Mesh.triangulate about this not
+    working for meshes that have non-coplanar faces -- e.g. some uses of
+    of_rows and skin that create meshes that pass CGAL could fail the coplanar
+    checks when projecting the faces to 2d. Setting eps to a high value could
+    mitigate, but perhaps a param to allow bypassing this check may be useful
+    (could set the epsilon specifically for to_plane to infinity or something).
+    Should there be a param that lets you skip the coplanarity exception in
+    Path3.to_plane? *)
+
+let triangulate ?eps ?idxs poly =
+  let len_poly = Array.length poly in
+  let idxs, len_idxs =
+    match idxs with
+    | Some idxs ->
+      let len_idxs = Array.length idxs in
+      if len_poly < 3
+      then invalid_arg "Polygon must have more than 2 points to be triangulated";
+      for i = 0 to len_idxs - 1 do
+        if idxs.(i) < 0 || idxs.(i) >= len_poly
+        then invalid_arg "Triangulation indices are out of bound for given poly points."
+      done;
+      idxs, len_idxs
+    | None -> Array.init len_poly Fun.id, len_poly
+  in
+  if len_idxs <= 2
+  then []
+  else if len_idxs = 3
+  then
+    if degenerate_tri ?eps poly.(idxs.(0)) poly.(idxs.(1)) poly.(idxs.(2))
+    then []
+    else (
+      if V2.collinear poly.(idxs.(0)) poly.(idxs.(1)) poly.(idxs.(2))
+      then invalid_arg "Triangulation cannot be performed on a collinear triplet.";
+      [ Array.to_list idxs ] )
+  else if APath2.is_clockwise (Array.init len_idxs (fun i -> poly.(idxs.(i))))
+  then triangulate' ?eps poly idxs
+  else
+    triangulate' ?eps poly (Array.init len_idxs (fun i -> idxs.(len_idxs - 1 - i)))
+    |> List.map List.rev

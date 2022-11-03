@@ -10,7 +10,7 @@ let to_path3 ?(plane = Plane.xy) = List.map (Plane.lift plane)
 
 let clockwise_sign ?(eps = Util.epsilon) = function
   | [] | [ _ ] | [ _; _ ] -> invalid_arg "Path/polygon must have more than two points."
-  | p0 :: p1 :: t         ->
+  | p0 :: p1 :: t ->
     let f (sum, last) p = sum +. ((last.x -. p.x) *. (last.y +. p.y)), p in
     let sum, _ = List.fold_left f (f (0., p0) p1) t in
     if Math.approx ~eps sum 0. then 0. else Float.(of_int @@ compare sum 0.)
@@ -23,7 +23,7 @@ let self_intersections ?eps ?closed path =
 let is_simple ?eps ?closed path = APath2.is_simple ?eps ?closed (Array.of_list path)
 
 let bbox = function
-  | []       -> invalid_arg "Cannot calculate bbox for empty path."
+  | [] -> invalid_arg "Cannot calculate bbox for empty path."
   | hd :: tl ->
     let f (bb : V2.bbox) p =
       let min = V2.lower_bounds bb.min p
@@ -34,7 +34,7 @@ let bbox = function
 
 let centroid ?(eps = Util.epsilon) = function
   | [] | [ _ ] | [ _; _ ] -> invalid_arg "Polygon must have more than two points."
-  | p0 :: p1 :: tl        ->
+  | p0 :: p1 :: tl ->
     let f (area_sum, p_sum, p1) p2 =
       let { z = area; _ } = V2.(cross (sub p2 p0) (sub p1 p0)) in
       area +. area_sum, V2.(add p_sum (smul (p0 +@ p1 +@ p2) area)), p2
@@ -46,7 +46,7 @@ let centroid ?(eps = Util.epsilon) = function
 
 let area ?(signed = false) = function
   | [] | [ _ ] | [ _; _ ] -> 0.
-  | p0 :: p1 :: tl        ->
+  | p0 :: p1 :: tl ->
     let f (area, p1) p2 = (area +. V2.(V3.get_z (cross (sub p1 p0) (sub p2 p0)))), p2 in
     let area, _ = List.fold_left f (0., p1) tl in
     (if signed then area else Float.abs area) /. 2.
@@ -191,7 +191,7 @@ let hull ?(all = false) ps =
       if i = stop || is_cw ps.(idx) ps.(a) ps.(b)
       then i, h
       else backtrack idx rest stop (i + 1)
-    | _                     -> i, h
+    | _ -> i, h
   in
   if len < 2
   then []
@@ -211,3 +211,7 @@ let hull ?(all = false) ps =
       n := !n - removed + 1
     done;
     List.rev_map (Array.get ps) !h )
+
+let triangulate ?eps poly =
+  let poly = Array.of_list poly in
+  Triangulate.triangulate ?eps poly |> List.map (List.map (fun i -> poly.(i)))

@@ -396,8 +396,6 @@ let drop_unused_points { n_points; points; faces } =
   and faces = List.map (List.map (fun i -> remap.(i))) faces in
   { n_points = !count; points; faces }
 
-let add_face face t = { t with faces = face :: t.faces }
-let add_faces faces t = { t with faces = List.rev_append faces t.faces }
 let rev_faces t = { t with faces = List.map List.rev t.faces }
 
 let volume { n_points; points; faces } =

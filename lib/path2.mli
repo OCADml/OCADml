@@ -265,6 +265,12 @@ val point_inside
     resting on the edges of the hull (default = [false]). *)
 val hull : ?all:bool -> t -> t
 
+(** [triangulate ?eps t]
+
+    Break the polygon [t] into a list of triangles. If provided, [eps] is used
+    for duplicate point and collinearity checks. *)
+val triangulate : ?eps:float -> t -> t list
+
 (** {1 Path Matching / Vertex Association}
 
   Point duplicating strategies for associating vertices between incommensurate
