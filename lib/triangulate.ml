@@ -85,7 +85,7 @@ let triangulate' ?eps poly idxs =
         (* discard if degenerate and move on *)
         if len_idxs <= 4 then tris else loop tris (wrap_sub idxs (ear + 3) (len_idxs - 2))
       | Some (`Ear ear) ->
-        let tri = List.init 3 (fun i -> (ear + i) mod len_idxs)
+        let tri = List.init 3 (fun i -> idxs.(ear + (i mod len_idxs)))
         and idxs = wrap_sub idxs (ear + 2) (len_idxs - 1) in
         loop (tri :: tris) idxs )
   in
