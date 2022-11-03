@@ -821,15 +821,12 @@ val merge_points : ?eps:float -> t -> t
     Drop unreferenced points (not included in any face) from the mesh [t]. *)
 val drop_unused_points : t -> t
 
-(** [add_face face t]
+(** [triangulate ?eps t]
 
-    Add a single face to the mesh [t]. *)
-val add_face : int list -> t -> t
-
-(** [add_faces faces t]
-
-    Add a list of faces to the mesh [t]. *)
-val add_faces : int list list -> t -> t
+    Triangulate the faces of the mesh [t]. Some degree of coplanarity in the
+    input faces can be fine, though too much  can cause triangulation to fail. If
+    provided, [eps] is used for duplicate point and collinearity checks. *)
+val triangulate : ?eps:float -> t -> t
 
 (** [rev_faces t]
 

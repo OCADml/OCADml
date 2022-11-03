@@ -396,9 +396,22 @@ let drop_unused_points { n_points; points; faces } =
   and faces = List.map (List.map (fun i -> remap.(i))) faces in
   { n_points = !count; points; faces }
 
-let add_face face t = { t with faces = face :: t.faces }
-let add_faces faces t = { t with faces = List.rev_append faces t.faces }
 let rev_faces t = { t with faces = List.map List.rev t.faces }
+
+let triangulate ?eps { n_points; points; faces } =
+  let pts = Array.of_list points in
+  let f faces = function
+    | [ _; _; _ ] as face -> face :: faces
+    | face ->
+      let face = Array.of_list face in
+      let poly = Array.init (Array.length face) (fun i -> pts.(face.(i))) in
+      let norm = APath3.normal poly in
+      let proj = Plane.(project (of_normal ~point:pts.(face.(0)) norm)) in
+      Triangulate.triangulate ?eps (Array.map proj poly)
+      |> List.map (List.map (fun i -> face.(i)))
+      |> Fun.flip List.rev_append faces
+  in
+  { n_points; points; faces = List.fold_left f [] faces }
 
 let volume { n_points; points; faces } =
   if n_points = 0
