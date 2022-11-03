@@ -27,7 +27,7 @@ val ortho : t -> t
 
 (** [left_of_line ?eps ~line t]
 
-    Return [1.] if [t] is left of [line], [-1.] if it is to the right, and [0.]
+    Return [-1.] if [t] is left of [line], [1.] if it is to the right, and [0.]
     if it falls on (within [eps]) the [line]. Float is returned as this is
     simply a clockwise check. *)
 val left_of_line : ?eps:float -> line:line -> t -> float

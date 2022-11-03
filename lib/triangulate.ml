@@ -34,10 +34,10 @@ let none_inside ?eps poly idxs p0 p1 p2 =
             || V2.(
                  (* vert = p1 and some of its adjacent edges cross the open segment *)
                  approx ?eps vert p1
-                 && left_of_line ?eps ~line:{ a = prev; b = p1 } p0 >= 0.
-                 && left_of_line ?eps ~line:{ a = p1; b = prev } p2 >= 0.
-                 && left_of_line ?eps ~line:{ a = p1; b = next } p2 >= 0.
-                 && left_of_line ?eps ~line:{ a = next; b = p1 } p0 >= 0.) )
+                 && left_of_line ?eps ~line:{ a = prev; b = p1 } p0 <= 0.
+                 && left_of_line ?eps ~line:{ a = p1; b = prev } p2 <= 0.
+                 && left_of_line ?eps ~line:{ a = p1; b = next } p2 <= 0.
+                 && left_of_line ?eps ~line:{ a = next; b = p1 } p0 <= 0.) )
       then false
       else loop (i + 1) )
   in
