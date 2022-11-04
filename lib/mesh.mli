@@ -6,7 +6,7 @@
     the {{:https://github.com/revarbat/BOSL2/} BOSL2 OpenSCAD library}. *)
 
 (** Points and faces 3-dimensional mesh. *)
-type t = Mesh0.t
+type t
 
 (** {1 Basic Constructors }*)
 

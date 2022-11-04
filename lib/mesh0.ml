@@ -8,7 +8,7 @@ end)
 module IntSet = Set.Make (Int)
 
 type t =
-  { n_points : int
+  { size : int
   ; points : V3.t list
   ; faces : int list list
   }
@@ -30,11 +30,11 @@ type style =
   | `Concave
   ]
 
-let empty = { n_points = 0; points = []; faces = [] }
-let size t = t.n_points
+let empty = { size = 0; points = []; faces = [] }
+let size t = t.size
 let points t = t.points
 let faces t = t.faces
-let make ~points ~faces = { n_points = List.length points; points; faces }
+let make ~points ~faces = { size = List.length points; points; faces }
 
 let prune_rows ?(min_dist = 0.05) = function
   | [] -> [], []
@@ -173,7 +173,7 @@ let of_rows
       | `Top -> top_cap :: faces
       | `Bot -> bottom_cap :: faces
     in
-    { n_points = n_layers * n_facets; points; faces }
+    { size = n_layers * n_facets; points; faces }
 
 let of_ragged ?(looped = false) ?(rev = false) rows =
   let starts_lenghts, points =
@@ -254,22 +254,22 @@ let of_ragged ?(looped = false) ?(rev = false) rows =
       in
       List.filter_map cull_degenerate all_faces
     in
-    { n_points = Array.length verts; points; faces }
+    { size = Array.length verts; points; faces }
 
 let of_path2 ?(rev = false) layer =
-  let n_points, points, face =
+  let size, points, face =
     List.fold_left
       (fun (n, ps, fs) p -> n + 1, V3.of_v2 p :: ps, n :: fs)
       (0, [], [])
       layer
   in
-  { n_points; points; faces = [ (if rev then List.rev face else face) ] }
+  { size; points; faces = [ (if rev then List.rev face else face) ] }
 
 let of_path3 ?(rev = false) layer =
-  let n_points, points, face =
+  let size, points, face =
     List.fold_left (fun (n, ps, fs) p -> n + 1, p :: ps, n :: fs) (0, [], []) layer
   in
-  { n_points; points; faces = [ (if rev then List.rev face else face) ] }
+  { size; points; faces = [ (if rev then List.rev face else face) ] }
 
 let of_poly2 ?rev = function
   | Poly2.{ outer; holes = [] } -> of_path2 ?rev outer
@@ -298,20 +298,20 @@ let of_polygons polys =
     a
   in
   let faces = List.init n (fun i -> List.init lengths.(i) (fun j -> j + offsets.(i))) in
-  { n_points = offsets.(n); points = List.concat polys; faces }
+  { size = offsets.(n); points = List.concat polys; faces }
 
 let join = function
   | [] -> empty
   | [ t ] -> t
-  | { n_points; points; faces } :: ts ->
+  | { size; points; faces } :: ts ->
     let f (n, ps, fs) t =
       let offset = List.map (List.map (( + ) n)) t.faces in
-      n + t.n_points, t.points :: ps, offset :: fs
+      n + t.size, t.points :: ps, offset :: fs
     in
-    let n_points, ps, fs = List.fold_left f (n_points, [ points ], [ faces ]) ts in
-    { n_points; points = List.concat (List.rev ps); faces = List.concat (List.rev fs) }
+    let size, ps, fs = List.fold_left f (size, [ points ], [ faces ]) ts in
+    { size; points = List.concat (List.rev ps); faces = List.concat (List.rev fs) }
 
-let merge_points ?(eps = Util.epsilon) { n_points; points; faces } =
+let merge_points ?(eps = Util.epsilon) { size; points; faces } =
   let drop = IntTbl.create 100
   and pts = Array.of_list points in
   let len = Array.length pts in
@@ -374,16 +374,16 @@ let merge_points ?(eps = Util.epsilon) { n_points; points; faces } =
     in
     List.fold_left f [] faces
   in
-  { n_points = n_points - IntTbl.length drop; points; faces }
+  { size = size - IntTbl.length drop; points; faces }
 
-let drop_unused_points { n_points; points; faces } =
-  let keep = Array.make n_points false
-  and remap = Array.make n_points 0
+let drop_unused_points { size; points; faces } =
+  let keep = Array.make size false
+  and remap = Array.make size 0
   and count = ref 0 in
   let () =
     let add_face s face = List.fold_left (fun s i -> IntSet.add i s) s face in
     let set = List.fold_left add_face IntSet.empty faces in
-    for i = 0 to n_points - 1 do
+    for i = 0 to size - 1 do
       if IntSet.mem i set
       then begin
         keep.(i) <- true;
@@ -394,11 +394,11 @@ let drop_unused_points { n_points; points; faces } =
   in
   let points = List.filteri (fun i _ -> keep.(i)) points
   and faces = List.map (List.map (fun i -> remap.(i))) faces in
-  { n_points = !count; points; faces }
+  { size = !count; points; faces }
 
 let rev_faces t = { t with faces = List.map List.rev t.faces }
 
-let triangulate ?eps { n_points; points; faces } =
+let triangulate ?eps { size; points; faces } =
   let pts = Array.of_list points in
   let f faces = function
     | [ _; _; _ ] as face -> face :: faces
@@ -411,10 +411,10 @@ let triangulate ?eps { n_points; points; faces } =
       |> List.map (List.map (fun i -> face.(i)))
       |> Fun.flip List.rev_append faces
   in
-  { n_points; points; faces = List.fold_left f [] faces }
+  { size; points; faces = List.fold_left f [] faces }
 
-let volume { n_points; points; faces } =
-  if n_points = 0
+let volume { size; points; faces } =
+  if size = 0
   then 0.
   else (
     let pts = Array.of_list points in
@@ -431,8 +431,8 @@ let volume { n_points; points; faces } =
     in
     List.fold_left f 0. faces /. 6. )
 
-let area { n_points; points; faces } =
-  if n_points = 0
+let area { size; points; faces } =
+  if size = 0
   then 0.
   else (
     let pts = Array.of_list points in
@@ -443,8 +443,8 @@ let area { n_points; points; faces } =
     in
     List.fold_left f 0. faces )
 
-let centroid ?(eps = Util.epsilon) { n_points; points; faces } =
-  if n_points = 0 then invalid_arg "No centroid for empty polyhedron.";
+let centroid ?(eps = Util.epsilon) { size; points; faces } =
+  if size = 0 then invalid_arg "No centroid for empty polyhedron.";
   let pts = Array.of_list points in
   let rec sum_face total_vol weighted_sum p1 idxs =
     let calc total_vol weighted_sum p1 p2 p3 =
@@ -544,7 +544,7 @@ let hull = function
         else acc
       in
       let faces, _ = Util.fold_init (Array.length ps) f (triangles, planes) in
-      { n_points = Array.length ps; faces; points } )
+      { size = Array.length ps; faces; points } )
 
 let translate p t = { t with points = Path3.translate p t.points }
 let xtrans x t = { t with points = Path3.xtrans x t.points }
