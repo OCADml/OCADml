@@ -34,6 +34,11 @@ let[@inline] v2 x y = { x; y }
     Construct a 3d vector from [x], [y], and [z] coordinates. *)
 let[@inline] v3 x y z = { x; y; z }
 
+(** [v4 x y z]
+
+    Construct a 4d vector from [x], [y], [z], and [w] coordinates. *)
+let[@inline] v4 x y z w = { x; y; z; w }
+
 (** 2-dimensional vector type, including basic mathematical/geometrical
     operations and transformations, allowing for points in 2d space, and higher
     level types composed of them ({i e.g.} {!Path2.t} and {!Poly2.t}) to be
