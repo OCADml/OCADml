@@ -3,6 +3,14 @@
     Vectors for describing transformations and points in
     2/3-dimensional space. *)
 
+(** 4-dimensional vector *)
+type v4 = V.v4 =
+  { x : float
+  ; y : float
+  ; z : float
+  ; w : float
+  }
+
 (** 3-dimensional vector *)
 type v3 = V.v3 =
   { x : float

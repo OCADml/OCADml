@@ -1,3 +1,12 @@
+(** Four-dimensional vector
+    @canonical OCADml.v4 *)
+type v4 =
+  { x : float
+  ; y : float
+  ; z : float
+  ; w : float
+  }
+
 (** Three-dimensional vector
     @canonical OCADml.v3 *)
 type v3 =
@@ -15,6 +24,7 @@ type v2 =
 
 let[@inline] v2 x y = { x; y }
 let[@inline] v3 x y z = { x; y; z }
+let[@inline] v4 x y z w = { x; y; z; w }
 
 module type S = sig
   type t

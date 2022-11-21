@@ -1,4 +1,4 @@
-type t =
+type t = V.v4 =
   { x : float
   ; y : float
   ; z : float
@@ -128,7 +128,7 @@ let transform ?about t v =
   in
   match about with
   | Some p -> V3.sub v p |> aux |> V3.add p
-  | None   -> aux v
+  | None -> aux v
 
 let align v1 v2 =
   let dp = V3.dot v1 v2 in
