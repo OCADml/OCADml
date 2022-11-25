@@ -37,6 +37,7 @@ let compare a b =
 let norm { x; y } = Float.sqrt ((x *. x) +. (y *. y))
 let distance a b = norm (sub a b)
 let approx ?(eps = Util.epsilon) a b = Float.(compare (distance a b) eps) < 1
+let abs t = v (Float.abs t.x) (Float.abs t.y)
 
 let normalize t =
   let n = norm t in
@@ -115,8 +116,8 @@ let line_closest_point ?(bounds = false, false) ~line t =
   | false, false ->
     let n = normalize (sub line.a line.b) in
     add line.b (smul n (dot (sub t line.b) n))
-  | true, true   -> add t (fst @@ closest_simplex1 (sub line.a t) (sub line.b t))
-  | b1, b2       ->
+  | true, true -> add t (fst @@ closest_simplex1 (sub line.a t) (sub line.b t))
+  | b1, b2 ->
     let line = if b1 && not b2 then line else { a = line.b; b = line.a } in
     let seg_vec = normalize (sub line.b line.a) in
     let projection = dot (sub t line.a) seg_vec in
@@ -125,7 +126,7 @@ let line_closest_point ?(bounds = false, false) ~line t =
 let distance_to_line ?(bounds = false, false) ~line t =
   match bounds with
   | false, false -> distance_to_vector (sub t line.a) (normalize (sub line.b line.a))
-  | bounds       -> norm (sub t (line_closest_point ~bounds ~line t))
+  | bounds -> norm (sub t (line_closest_point ~bounds ~line t))
 
 let point_on_line ?(eps = Util.epsilon) ?bounds ~line t =
   distance_to_line ?bounds ~line t < eps
@@ -193,7 +194,7 @@ let rotate ?about theta t =
   in
   match about with
   | Some p -> sub t p |> rot |> add p
-  | None   -> rot t
+  | None -> rot t
 
 let[@inline] zrot ?about theta t = rotate ?about theta t
 let[@inline] scale a b = mul a b

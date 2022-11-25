@@ -45,6 +45,8 @@ let distance a b = norm (sub a b)
 let approx ?(eps = Util.epsilon) a b =
   not (Int.equal Float.(compare (distance a b) eps) 1)
 
+let abs { x; y; z } = v (Float.abs x) (Float.abs y) (Float.abs z)
+
 let normalize t =
   let n = norm t in
   if n > 0. then sdiv t n else t
@@ -147,8 +149,8 @@ let line_closest_point ?(bounds = false, false) ~line t =
   | false, false ->
     let n = normalize (sub line.a line.b) in
     add line.b (smul n (dot (sub t line.b) n))
-  | true, true   -> add t (fst @@ closest_simplex1 (sub line.a t) (sub line.b t))
-  | b1, b2       ->
+  | true, true -> add t (fst @@ closest_simplex1 (sub line.a t) (sub line.b t))
+  | b1, b2 ->
     let line = if b1 && not b2 then line else { a = line.b; b = line.a } in
     let seg_vec = normalize (sub line.b line.a) in
     let projection = dot (sub t line.a) seg_vec in
@@ -157,7 +159,7 @@ let line_closest_point ?(bounds = false, false) ~line t =
 let distance_to_line ?(bounds = false, false) ~line t =
   match bounds with
   | false, false -> distance_to_vector (sub t line.a) (normalize (sub line.b line.a))
-  | bounds       -> norm (sub t (line_closest_point ~bounds ~line t))
+  | bounds -> norm (sub t (line_closest_point ~bounds ~line t))
 
 let point_on_line ?(eps = Util.epsilon) ?bounds ~line t =
   distance_to_line ?bounds ~line t < eps
@@ -189,7 +191,7 @@ let xrot ?about theta t =
   in
   match about with
   | Some p -> sub t p |> rot |> add p
-  | None   -> rot t
+  | None -> rot t
 
 let yrot ?about theta t =
   let rot { x; y; z } =
@@ -201,7 +203,7 @@ let yrot ?about theta t =
   in
   match about with
   | Some p -> sub t p |> rot |> add p
-  | None   -> rot t
+  | None -> rot t
 
 let zrot ?about theta t =
   let rot { x; y; z } =
@@ -213,12 +215,12 @@ let zrot ?about theta t =
   in
   match about with
   | Some p -> sub t p |> rot |> add p
-  | None   -> rot t
+  | None -> rot t
 
 let rotate ?about { x; y; z } t =
   match about with
   | Some p -> sub t p |> xrot x |> yrot y |> zrot z |> add p
-  | None   -> xrot x t |> yrot y |> zrot z
+  | None -> xrot x t |> yrot y |> zrot z
 
 let[@inline] translate a b = add a b
 let[@inline] xtrans d { x; y; z } = v (x +. d) y z

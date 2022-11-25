@@ -115,6 +115,11 @@ module type S = sig
     Element-wise division of [t] by [s]. *)
   val sdiv : t -> float -> t
 
+  (** [abs t]
+
+    Calculate the absolute value of the vector [t]. *)
+  val abs : t -> t
+
   (** {1 Vector Math} *)
 
   (** [norm t]
