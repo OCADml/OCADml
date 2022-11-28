@@ -5,12 +5,7 @@
 
     The type {!t} contains the coefficients {b A}, {b B}, {b C}, and {b D},
     which describe the cartesian equation of a plane where [Ax + By + Cz = D]. *)
-type t = private
-  { a : float
-  ; b : float
-  ; c : float
-  ; d : float
-  }
+type t = private V.v4
 
 (** [to_tup t]
 

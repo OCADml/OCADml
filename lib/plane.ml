@@ -1,37 +1,32 @@
 open V
 
-type t =
-  { a : float
-  ; b : float
-  ; c : float
-  ; d : float
-  }
+type t = V.v4
 
-let to_tup { a; b; c; d } = a, b, c, d
+let to_tup { x; y; z; w } = x, y, z, w
 
 let make p1 p2 p3 =
   let ({ x; y; z } as crx) = V3.(cross (sub p3 p1) (sub p2 p1)) in
   let n = V3.norm crx in
   if Math.approx 0. n then invalid_arg "Plane points must not be collinear";
-  { a = x /. n; b = y /. n; c = z /. n; d = V3.dot crx p1 /. n }
+  { x = x /. n; y = y /. n; z = z /. n; w = V3.dot crx p1 /. n }
 
 let of_normal ?(point = V3.zero) ({ x; y; z } as normal) =
   let n = V3.norm normal in
   if Math.approx 0. n then invalid_arg "Normal cannot be zero.";
-  { a = x /. n; b = y /. n; c = z /. n; d = V3.dot normal point /. n }
+  { x = x /. n; y = y /. n; z = z /. n; w = V3.dot normal point /. n }
 
-let xy = { a = 0.; b = 0.; c = 1.; d = 0. }
-let xz = { a = 0.; b = 1.; c = 0.; d = 0. }
-let yz = { a = 1.; b = 0.; c = 0.; d = 0. }
+let xy = { x = 0.; y = 0.; z = 1.; w = 0. }
+let xz = { x = 0.; y = 1.; z = 0.; w = 0. }
+let yz = { x = 1.; y = 0.; z = 0.; w = 0. }
 
-let to_affine ~op { a; b; c; d } =
-  let n = v3 a b c in
-  let cp = V3.(sdiv (smul n d) (dot n n)) in
+let to_affine ~op { x; y; z; w } =
+  let n = v3 x y z in
+  let cp = V3.(sdiv (smul n w) (dot n n)) in
   match op with
   | `Project ->
     let rot = Quaternion.(to_affine @@ align n (v3 0. 0. 1.)) in
     Affine3.(mul rot (translate (V3.neg cp)))
-  | `Lift    ->
+  | `Lift ->
     let rot = Quaternion.(to_affine @@ align (v3 0. 0. 1.) n) in
     Affine3.(mul (translate cp) rot)
 
@@ -43,15 +38,15 @@ let lift t =
   let m = to_affine ~op:`Lift t in
   fun p -> Affine3.transform m (V3.of_v2 p)
 
-let normal { a; b; c; _ } = V3.normalize (v3 a b c)
-let offset { a; b; c; d } = d /. V3.norm (v3 a b c)
+let normal { x; y; z; w = _ } = V3.normalize (v3 x y z)
+let offset { x; y; z; w } = w /. V3.norm (v3 x y z)
 
-let normalize { a; b; c; d } =
-  let n = V3.norm (v3 a b c) in
-  { a = a /. n; b = b /. n; c = c /. n; d = d /. n }
+let normalize { x; y; z; w } =
+  let n = V3.norm (v3 x y z) in
+  { x = x /. n; y = y /. n; z = z /. n; w = w /. n }
 
-let neg { a; b; c; d } = { a = -.a; b = -.b; c = -.c; d = -.d }
-let distance_to_point { a; b; c; d } p = V3.dot (v3 a b c) p -. d
+let neg { x; y; z; w } = { x = -.x; y = -.y; z = -.z; w = -.w }
+let distance_to_point { x; y; z; w } p = V3.dot (v3 x y z) p -. w
 
 (** TODO: do some testing, and open an issue / PR with BOSL2 about greatest
    distance having different results depending on winding direction (which
@@ -59,8 +54,8 @@ let distance_to_point { a; b; c; d } p = V3.dot (v3 a b c) p -. d
    gives information, but I still think there is an issue, since a point on
    the plane is still able to give a non-zero distance depending on winding.  *)
 let greatest_distance t ps =
-  let { a; b; c; d } = normalize t in
-  let normal = v3 a b c in
+  let { x; y; z; w } = normalize t in
+  let normal = v3 x y z in
   let f (min, max) p =
     let n = V3.dot p normal in
     Float.min min n, Float.max max n
@@ -70,8 +65,8 @@ let greatest_distance t ps =
       Without this, non-zero distances can be returned for points that should be
       on the plane. *)
   Float.min
-    (Float.max (max_norm -. d) (d -. min_norm))
-    (Float.max (-.max_norm -. -.d) (-.min_norm -. -.d))
+    (Float.max (max_norm -. w) (w -. min_norm))
+    (Float.max (-.max_norm -. -.w) (-.min_norm -. -.w))
 
 let are_points_on ?(eps = Util.epsilon) t ps = greatest_distance t ps < eps
 let is_point_above ?(eps = Util.epsilon) t p = distance_to_point t p > eps
@@ -83,14 +78,14 @@ let line_angle t V3.{ a; b } =
   and cos_angle = V3.(norm @@ cross dir n) in
   Float.atan2 sin_angle cos_angle
 
-let line_intersection ?(eps = Util.epsilon) ?(bounds = false, false) t l =
+let line_intersection ?(eps = Util.epsilon) ?(bounds = false, false) (t : t) l =
   let ({ x = dx; y = dy; z = dz } as diff) = V3.sub l.V3.b l.a in
-  let a = (t.a *. l.a.x) +. (t.b *. l.a.y) +. (t.c *. l.a.z) +. (t.d *. -1.)
-  and b = (t.a *. dx) +. (t.b *. dy) +. (t.c *. dz) +. (t.d *. 0.) in
+  let a = (t.x *. l.a.x) +. (t.y *. l.a.y) +. (t.z *. l.a.z) +. (t.w *. -1.)
+  and b = (t.x *. dx) +. (t.y *. dy) +. (t.z *. dz) +. (t.w *. 0.) in
   match Math.approx ~eps b 0., Math.approx ~eps a 0. with
-  | true, true  -> `OnPlane l
+  | true, true -> `OnPlane l
   | true, false -> `Parallel
-  | _           ->
+  | _ ->
     let frac = -.a /. b in
     let good =
       let bn_a, bn_b = bounds in
@@ -98,4 +93,4 @@ let line_intersection ?(eps = Util.epsilon) ?(bounds = false, false) t l =
     in
     if good then `Point V3.(l.a +@ (diff *$ frac), frac) else `OutOfBounds
 
-let to_string { a; b; c; d } = Printf.sprintf "[%f, %f, %f, %f]" a b c d
+let to_string { x; y; z; w } = Printf.sprintf "[%f, %f, %f, %f]" x y z w
