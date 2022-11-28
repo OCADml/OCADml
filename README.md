@@ -20,7 +20,7 @@ in order to perform boolean operations, validation, and export, you'll need to
 work with a particular CAD package.
 
 ### OSCADml
-- [github](https://github.io/OSCADml)
+- [github](https://github.com/OCADml/OSCADml)
 - [docs](https://ocadml.github.io/OSCADml/OSCADml/index.html)
 - [examples](https://ocadml.github.io/OSCADml/OSCADml/index.html#examples)
 
