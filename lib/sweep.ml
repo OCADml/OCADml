@@ -525,25 +525,21 @@ let linear'
   in
   let bot_height = cap_height caps.bot
   and top_height = cap_height caps.top in
-  let height, slices =
-    (* drop midsection if cap height is greater than height *)
-    let h = height -. bot_height -. top_height in
+  let transforms =
+    let h = height -. bot_height -. top_height
+    and z = if center then height /. -2. else bot_height in
     if h < 0.
-    then 0., 0
+    then [ Affine3.ztrans z ]
     else (
       let slices =
         match slices, twist with
         | Some s, tw when Float.(abs tw /. (2. *. pi) < 1.) -> s
         | fn, tw -> helical_slices ?fa ?fn tw
       in
-      h, slices )
-  in
-  let z = if center then height /. -2. else bot_height
-  and s = height /. Float.of_int slices
-  and twist = if Float.abs twist > 0. then Some twist else None in
-  let transforms =
-    List.init (slices + 1) (fun i -> v3 0. 0. ((Float.of_int i *. s) +. z))
-    |> Path3.to_transforms ?scale_ez ?twist_ez ?scale ?twist
+      let s = height /. Float.of_int slices
+      and twist = if Float.abs twist > 0. then Some twist else None in
+      List.init (slices + 1) (fun i -> v3 0. 0. ((Float.of_int i *. s) +. z))
+      |> Path3.to_transforms ?scale_ez ?twist_ez ?scale ?twist )
   in
   sweep'
     ?style
