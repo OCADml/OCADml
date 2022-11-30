@@ -410,6 +410,10 @@ let sweep'
       let bot_lid, bot = cap `Bot ~m:Affine3.id bot_shape
       and top_lid, top = cap `Top ~m:Affine3.id top_shape in
       bot_lid, top_lid, Mesh0.join [ bot; top ]
+    | [ m ] ->
+      let bot_lid, bot = cap `Bot ~m bot_shape
+      and top_lid, top = cap `Top ~m top_shape in
+      bot_lid, top_lid, Mesh0.join [ bot; top ]
     | hd :: tl ->
       let _, mid, last_transform =
         let f (i, acc, _last) m =
