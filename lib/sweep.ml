@@ -45,8 +45,8 @@ module Cap = struct
     ]
 
   let poly_to_path_spec = function
-    | `Flat               -> `Flat
-    | `Empty              -> `Empty
+    | `Flat -> `Flat
+    | `Empty -> `Empty
     | `Round { outer; _ } -> `Round outer
 
   type caps =
@@ -71,17 +71,17 @@ module Cap = struct
 
   let radius_of_roundover = function
     | `Radius r -> r
-    | `Cut c    -> c /. (Float.sqrt 2. -. 1.)
+    | `Cut c -> c /. (Float.sqrt 2. -. 1.)
 
   let chamf ?(angle = Float.pi /. 4.) ?cut ?width ?height () =
     let a = Float.(min (pi /. 2.) (abs angle)) in
     let width, height =
       match width, height, cut with
-      | _, _, Some c         -> c /. Float.cos a, c /. Float.sin a
+      | _, _, Some c -> c /. Float.cos a, c /. Float.sin a
       | Some w, Some h, None -> w, h
-      | Some w, None, None   -> w, w /. Float.tan a
-      | None, Some h, None   -> h *. Float.tan a, h
-      | None, None, None     ->
+      | Some w, None, None -> w, w /. Float.tan a
+      | None, Some h, None -> h *. Float.tan a, h
+      | None, None, None ->
         invalid_arg "At least one of cut, width, or height must be specified for chamfer."
     in
     Offsets [ { d = -.width; z = Float.abs height } ]
@@ -121,7 +121,7 @@ module Cap = struct
     let joint =
       match spec with
       | `Joint j -> j
-      | `Cut c   -> 16. *. c /. Float.sqrt 2. /. (1. +. (4. *. curv))
+      | `Cut c -> 16. *. c /. Float.sqrt 2. /. (1. +. (4. *. curv))
     in
     let f (acc, last_z) { x = d; y = z } =
       let z = quantize z in
@@ -155,8 +155,8 @@ module Cap = struct
 
   let unpack_poly_spec ?(n_holes = 0) spec =
     let hole_spec outer_offsets = function
-      | `Same      -> fun _ -> `Round outer_offsets
-      | `Flip      ->
+      | `Same -> fun _ -> `Round outer_offsets
+      | `Flip ->
         let flipped = flip_d outer_offsets in
         fun _ -> `Round flipped
       | `Spec offs -> fun _ -> `Round offs
@@ -166,14 +166,14 @@ module Cap = struct
         then
           fun i ->
           match Array.get specs i with
-          | `Same      -> `Round outer_offsets
-          | `Flip      -> `Round (flip_d outer_offsets)
+          | `Same -> `Round outer_offsets
+          | `Flip -> `Round (flip_d outer_offsets)
           | `Spec offs -> `Round offs
         else invalid_arg "Mixed hole specs must match the number of holes."
     in
     match spec with
-    | `Flat                         -> `Flat, (fun _ -> `Flat), None
-    | `Empty                        -> `Empty, (fun _ -> `Empty), None
+    | `Flat -> `Flat, (fun _ -> `Flat), None
+    | `Empty -> `Empty, (fun _ -> `Empty), None
     | `Round { outer; holes; mode } -> `Round outer, hole_spec outer holes, Some mode
 end
 
@@ -183,15 +183,15 @@ let cap ?check_valid ?len ~flip ~close ~offset_mode ~m ~offsets shape =
   let len =
     match len with
     | Some l -> l
-    | None   -> List.length shape
+    | None -> List.length shape
   and z_dir = if flip then -1. else 1.
   and lift ~z m = List.map (fun p -> Affine3.transform m @@ V2.to_v3 ~z p) in
   let f (pts, faces, start_idx, last_shape, last_len, last_d) { d; z } =
     let mode, fn, fs, fa =
       match offset_mode with
       | Radius { fn; fs; fa } -> `Radius, fn, fs, fa
-      | Delta                 -> `Delta, None, None, None
-      | Chamfer               -> `Chamfer, None, None, None
+      | Delta -> `Delta, None, None, None
+      | Chamfer -> `Chamfer, None, None, None
     and z = z *. z_dir in
     let n, ps, fs =
       Offset.offset_with_faces
@@ -244,8 +244,8 @@ let sweep'
   =
   let outer_wind, hole_wind =
     match winding with
-    | `CCW     -> `CCW, `CW
-    | `CW      -> `CW, `CCW
+    | `CCW -> `CCW, `CW
+    | `CW -> `CW, `CCW
     | `NoCheck -> `NoCheck, `NoCheck
   and outer, holes, refine, ez =
     match shape with
@@ -271,7 +271,7 @@ let sweep'
         let map =
           match hole_map with
           | `Flat m -> List.map2 (wrap m)
-          | `Same   -> List.map2 (wrap outer_map)
+          | `Same -> List.map2 (wrap outer_map)
           | `Mix ms ->
             fun ha hb ->
               let zipped =
@@ -299,7 +299,7 @@ let sweep'
     let n_trans = List.length transforms in
     let get_shape, bot_shape, len_bot, top_shape, len_top =
       match shape with
-      | `Fixed shape               ->
+      | `Fixed shape ->
         let shape = Mesh0.enforce_winding winding shape in
         let len = List.length shape in
         Fun.const shape, shape, len, shape, len
@@ -315,7 +315,7 @@ let sweep'
           and samp =
             match mapping with
             | `Direct samp | `Reindex samp -> samp
-            | _                            -> `BySeg
+            | _ -> `BySeg
           in
           let f len path =
             if len <> n
@@ -329,13 +329,13 @@ let sweep'
           | `Direct _ | `Reindex _ ->
             let a, b = resample (a, b) in
             if Skin.is_direct mapping then a, b else a, Path2.reindex_polygon a b
-          | `Distance              -> resample @@ Path2.distance_match a b
-          | `FastDistance          -> resample @@ Path2.aligned_distance_match a b
-          | `Tangent               -> resample @@ Path2.tangent_match a b
+          | `Distance -> resample @@ Path2.distance_match a b
+          | `FastDistance -> resample @@ Path2.aligned_distance_match a b
+          | `Tangent -> resample @@ Path2.tangent_match a b
         in
         let prog =
           match progress with
-          | Some (`RelDist prog)  ->
+          | Some (`RelDist prog) ->
             let prog = Array.of_list prog in
             if Array.length prog <> n_trans
             then
@@ -352,7 +352,7 @@ let sweep'
               dists.(i) <- dists.(i) /. dists.(n_trans - 1)
             done;
             Array.get dists
-          | Some `AutoPoints      ->
+          | Some `AutoPoints ->
             let n = List.length transforms in
             (* less than 2 transforms are not allowed for morphs *)
             let step = 1. /. Float.of_int (n - 1) in
@@ -381,8 +381,8 @@ let sweep'
         transition, bot, len_bot, top, len_top
     in
     let unpack_cap = function
-      | `Flat                    -> sealed, []
-      | `Empty                   -> false, []
+      | `Flat -> sealed, []
+      | `Empty -> false, []
       | `Round (Offsets offsets) -> sealed, offsets
     in
     let close_top, top_offsets = unpack_cap top
@@ -406,7 +406,7 @@ let sweep'
           ~offsets:bot_offsets
     in
     match transforms with
-    | []       ->
+    | [] ->
       let bot_lid, bot = cap `Bot ~m:Affine3.id bot_shape
       and top_lid, top = cap `Top ~m:Affine3.id top_shape in
       bot_lid, top_lid, Mesh0.join [ bot; top ]
@@ -427,12 +427,12 @@ let sweep'
   in
   let mesh =
     match caps, holes with
-    | `Caps { top; bot }, []    ->
+    | `Caps { top; bot }, [] ->
       let top = poly_to_path_spec top
       and bot = poly_to_path_spec bot in
       let _, _, poly = morph ~winding ~top ~bot outer in
       poly
-    | `Looped, _                ->
+    | `Looped, _ ->
       ( match shape with
       | Fixed Poly2.{ outer; holes } ->
         let f ~winding path =
@@ -441,7 +441,7 @@ let sweep'
           |> Mesh0.of_rows ?style ~endcaps:`Loop
         in
         Mesh0.join (f ~winding:outer_wind outer :: List.map (f ~winding:hole_wind) holes)
-      | Morph _                      -> invalid_arg "Cannot loop a morph (see skin)." )
+      | Morph _ -> invalid_arg "Cannot loop a morph (see skin)." )
     | `Caps { top; bot }, holes ->
       let n_holes = List.length holes in
       let top, top_holes, top_mode = unpack_poly_spec ~n_holes top
@@ -465,7 +465,7 @@ let sweep'
       let validate =
         match check_valid with
         | Some `No -> false
-        | _        -> true
+        | _ -> true
       and outer_bot, outer_top, outer =
         morph ~winding:outer_wind ~sealed:false ?top_mode ?bot_mode ~top ~bot outer
       in
@@ -519,19 +519,27 @@ let linear'
     ~height
     shape
   =
-  let slices =
-    match slices, twist with
-    | Some s, tw when Float.(abs tw /. (2. *. pi) < 1.) -> s
-    | fn, tw -> helical_slices ?fa ?fn tw
-  in
   let cap_height = function
     | `Flat | `Empty -> 0.
     | `Round { outer = Offsets l; _ } -> List.fold_left (fun _ { z; _ } -> z) 0. l
   in
   let bot_height = cap_height caps.bot
   and top_height = cap_height caps.top in
+  let height, slices =
+    (* drop midsection if cap height is greater than height *)
+    let h = height -. bot_height -. top_height in
+    if h < 0.
+    then 0., 0
+    else (
+      let slices =
+        match slices, twist with
+        | Some s, tw when Float.(abs tw /. (2. *. pi) < 1.) -> s
+        | fn, tw -> helical_slices ?fa ?fn tw
+      in
+      h, slices )
+  in
   let z = if center then height /. -2. else bot_height
-  and s = Float.max 0. (height -. bot_height -. top_height) /. Float.of_int slices
+  and s = height /. Float.of_int slices
   and twist = if Float.abs twist > 0. then Some twist else None in
   let transforms =
     List.init (slices + 1) (fun i -> v3 0. 0. ((Float.of_int i *. s) +. z))
@@ -763,7 +771,7 @@ let path'
       let dists = Path3.cummulative_length path in
       let f d = function
         | (Some t as total), acc -> total, (d /. t) :: acc
-        | None, acc              -> Some d, 1. :: acc
+        | None, acc -> Some d, 1. :: acc
       in
       Some (`RelDist (snd @@ List.fold_right f dists (None, [])))
   in

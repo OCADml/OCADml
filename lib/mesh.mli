@@ -466,7 +466,10 @@ val sweep
 
     Vertically extrude a 2d polygon from the XY plane to [height]. If [?center]
     is true, the resulting 3D object is centered around the XY plane, rather than
-    resting on top of it.
+    resting on top of it. Roundovers described by [caps] are taken into account such
+    that the final shape conforms to the specified [height]. If [height] is less
+    than the combined height of [caps], there will simply be no "mid-section"
+    (and the resulting height will not reflect the [height] parameter).
     - [?twist] rotates the shape by the specified angle as it is extruded
       upwards
     - [?slices] specifies the number of intermediate points along the Z axis of
