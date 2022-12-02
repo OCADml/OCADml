@@ -1,5 +1,5 @@
 ## v0.1.3
-- Use v4 type for the private `Plane.t`
+- Use v4 type for `Plane.t` abstract it and add type conversions
 - `Mesh.extrude` altered to return mid-sectionless shape when `~height` is less
   than the combined height of `~caps` (rather than breaking with `nans`)
 
