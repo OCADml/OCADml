@@ -3,6 +3,9 @@ open V
 type t = V.v4
 
 let to_tup { x; y; z; w } = x, y, z, w
+let of_tup (x, y, z, w) = { x; y; z; w }
+let to_v4 t = t
+let of_v4 v = v
 
 let make p1 p2 p3 =
   let ({ x; y; z } as crx) = V3.(cross (sub p3 p1) (sub p2 p1)) in

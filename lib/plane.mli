@@ -5,12 +5,27 @@
 
     The type {!t} contains the coefficients {b A}, {b B}, {b C}, and {b D},
     which describe the cartesian equation of a plane where [Ax + By + Cz = D]. *)
-type t = private V.v4
+type t
 
 (** [to_tup t]
 
  Return the plane [t] as a tuple of its coefficients. *)
 val to_tup : t -> float * float * float * float
+
+(** [of_tup (a, b, c, d)]
+
+ Create a plane from a tuple of coefficients (xyz normal and offset). *)
+val of_tup : float * float * float * float -> t
+
+(** [to_v4 t]
+
+ Return the plane [t] as a 4d vector of coefficients. *)
+val to_v4 : t -> V.v4
+
+(** [of_v4 v]
+
+ Create a plane from a 4d vector containing coefficients (xyz normal and offset). *)
+val of_v4 : V.v4 -> t
 
 (** [make p1 p2 p3]
 
