@@ -4,6 +4,7 @@
   than the combined height of `~caps` (rather than breaking with `nans`)
 - Use `Mesh.Cap.t` and sub-variants more consistently for `~caps` specification in
   sweeping functions of `Mesh` (looping restricted using sub-types)
+- Add `Mesh.revolve`
 
 ## v0.1.2
 - Add v4 (4d vector) type at top level (use abstracted in Quaternion)

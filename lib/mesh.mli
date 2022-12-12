@@ -517,7 +517,7 @@ val revolve
   -> ?shift:V2.t
   -> ?angle:float
   -> Poly2.t
-  -> Mesh0.t
+  -> t
 
 (** [path_extrude ?check_valid ?style ?merge ?winding ?caps ?euler
      ?scale_ez ?twist_ez ?scale ?twist ~path poly]
