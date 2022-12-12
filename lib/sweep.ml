@@ -844,17 +844,18 @@ let revolve
     ?fn
     ?fa
     ?fs
-    ?(shift = v2 0. 0.)
+    ?(skew = v2 0. 0.)
     ?angle
     shape
   =
   let bb = Poly2.bbox shape in
   if bb.min.x < 0.
   then invalid_arg "Input shape must exist entirely in the X+ half-plane.";
-  let h = bb.max.y -. bb.min.y in
-  let steps = Util.helical_fragments ?fn ?fa ?fs bb.max.x in
+  let h = bb.max.y -. bb.min.y
+  and steps = Util.helical_fragments ?fn ?fa ?fs bb.max.x in
   let sk =
-    Affine3.(mul (ztrans (-.bb.min.y)) (skew ~xz:(shift.x /. h) ~yz:(shift.y /. h) ()))
+    let { x; y } = skew in
+    Affine3.(mul (ztrans (-.bb.min.y)) (skew ~xz:(x /. h) ~yz:(y /. h) ()))
   in
   let transforms =
     let f =

@@ -495,26 +495,21 @@ val extrude
   -> Poly2.t
   -> t
 
-(** [revolve ?angle poly]
+(** [revolve ?angle ?skew poly]
 
-    Revolve a 2d polygon (defined within the X+ half-plane) around the z-axis. *)
+    Revolve a 2d polygon (defined within the X+ half-plane) around the z-axis.
+    An [angle] between {b 0} and {b 2π} can be provided to specify an incomplete
+    revolution, by default the result loops back onto itself.
+    - [skew:{x; y}] skews the revolved mesh in the [x]z and [y]z planes *)
 val revolve
-  :  ?style:
-       [< `Alt
-       | `Concave
-       | `Convex
-       | `Default
-       | `MinEdge
-       | `Quincunx > `Default
-       `Quincunx
-       ]
+  :  ?style:style
   -> ?check_valid:[ `No | `Quality of int ]
   -> ?merge:bool
   -> ?winding:[ `CCW | `CW | `NoCheck ]
   -> ?fn:int
   -> ?fa:float
   -> ?fs:float
-  -> ?shift:V2.t
+  -> ?skew:V2.t
   -> ?angle:float
   -> Poly2.t
   -> t
