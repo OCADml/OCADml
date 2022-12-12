@@ -19,6 +19,8 @@
  (name OCADml)
  (synopsis "Types and functions for building CAD packages in OCaml")
  (description "Types and functions for building CAD packages in OCaml")
+ (tags
+  ("OCADml" "CAD"))
  (depends
   (ocaml
    (>= 4.13.0))
