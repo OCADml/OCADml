@@ -48,23 +48,17 @@
   <span>height:float <span class="arrow">&#45;&gt;</span></span>
   <span><a href="../Poly2/index.html#type-t">Poly2.t</a> <span class="arrow">&#45;&gt;</span></span>
   <a href="#type-t">t</a></span></code></div><div class="spec-doc"><p><code>extrude ~height poly</code></p><p>Vertically extrude a 2d polygon from the XY plane to <code>height</code>. If <code>?center</code> is true, the resulting 3D object is centered around the XY plane, rather than resting on top of it. Roundovers described by <code>caps</code> are taken into account such that the final shape conforms to the specified <code>height</code>. If <code>height</code> is less than the combined height of <code>caps</code>, there will simply be no &quot;mid-section&quot; (and the resulting height will not reflect the <code>height</code> parameter).</p><ul><li><code>?twist</code> rotates the shape by the specified angle as it is extruded upwards</li><li><code>?slices</code> specifies the number of intermediate points along the Z axis of the extrusion. By default this increases with the value of <code>?twist</code>, though manual refinement my improve results.</li><li><code>?scale</code> expands or contracts the shape in X and Y as it is extruded upward. Default is <code>(v2 1. 1.)</code>, no scaling.</li><li>Scaling/twisting proceed linearly by default, though bezier easing can be specified by providing handle points to the <code>scale_ez</code> and <code>twist_ez</code> parameter respectively. (see <a href="../Path3/index.html#val-scaler"><code>Path3.scaler</code></a> and <a href="../Path3/index.html#val-twister"><code>Path3.twister</code></a>).</li></ul></div></div><div class="odoc-spec"><div class="spec value" id="val-revolve" class="anchored"><a href="#val-revolve" class="anchor"></a><code><span><span class="keyword">val</span> revolve : 
-  <span>?style:
-    <span>[&lt; `Alt
-    <span>| `Concave</span>
-    <span>| `Convex</span>
-    <span>| `Default</span>
-    <span>| `MinEdge</span>
-    <span>| `Quincunx</span> Default Quincunx ]</span> <span class="arrow">&#45;&gt;</span></span>
+  <span>?style:<a href="#type-style">style</a> <span class="arrow">&#45;&gt;</span></span>
   <span>?check_valid:<span>[ `No <span><span>| `Quality</span> of int</span> ]</span> <span class="arrow">&#45;&gt;</span></span>
   <span>?merge:bool <span class="arrow">&#45;&gt;</span></span>
   <span>?winding:<span>[ `CCW <span>| `CW</span> <span>| `NoCheck</span> ]</span> <span class="arrow">&#45;&gt;</span></span>
   <span>?fn:int <span class="arrow">&#45;&gt;</span></span>
   <span>?fa:float <span class="arrow">&#45;&gt;</span></span>
   <span>?fs:float <span class="arrow">&#45;&gt;</span></span>
-  <span>?shift:<a href="../V2/index.html#type-t">V2.t</a> <span class="arrow">&#45;&gt;</span></span>
+  <span>?skew:<a href="../V2/index.html#type-t">V2.t</a> <span class="arrow">&#45;&gt;</span></span>
   <span>?angle:float <span class="arrow">&#45;&gt;</span></span>
   <span><a href="../Poly2/index.html#type-t">Poly2.t</a> <span class="arrow">&#45;&gt;</span></span>
-  <a href="#type-t">t</a></span></code></div><div class="spec-doc"><p><code>revolve ?angle poly</code></p><p>Revolve a 2d polygon (defined within the X+ half-plane) around the z-axis.</p></div></div><div class="odoc-spec"><div class="spec value" id="val-path_extrude" class="anchored"><a href="#val-path_extrude" class="anchor"></a><code><span><span class="keyword">val</span> path_extrude : 
+  <a href="#type-t">t</a></span></code></div><div class="spec-doc"><p><code>revolve ?angle ?skew poly</code></p><p>Revolve a 2d polygon (defined within the X+ half-plane) around the z-axis. An <code>angle</code> between <b>0</b> and <b>2π</b> can be provided to specify an incomplete revolution, by default the result loops back onto itself.</p><ul><li><code>skew:{x; y}</code> skews the revolved mesh in the <code>x</code>z and <code>y</code>z planes</li></ul></div></div><div class="odoc-spec"><div class="spec value" id="val-path_extrude" class="anchored"><a href="#val-path_extrude" class="anchor"></a><code><span><span class="keyword">val</span> path_extrude : 
   <span>?style:<a href="#type-style">style</a> <span class="arrow">&#45;&gt;</span></span>
   <span>?check_valid:<span>[ <span>`Quality of int</span> <span>| `No</span> ]</span> <span class="arrow">&#45;&gt;</span></span>
   <span>?merge:bool <span class="arrow">&#45;&gt;</span></span>
