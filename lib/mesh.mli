@@ -338,16 +338,14 @@ module Cap : sig
   (** Cap specification (flat, open, or round) type of {!t}. See {!capped} for construction. *)
   type caps
 
-  (** Capless end-to-end looping type of {!t}. *)
-  type loop
-
   (** Top-level configuration type for {!sweep}, allowing for the end-caps
    to be specified using the types above, or to simply loop the first and last
    layers of the mesh together (see: {!type:endcaps} [`Loop] as used by
    {!of_rows}). *)
-  type 'c t =
-    | Looped : loop t
-    | Caps : caps -> caps t
+  type t =
+    [ `Looped
+    | `Caps of caps
+    ]
 
   (** [chamf ?angle ?cut ?width ?height ()]
 
@@ -409,23 +407,23 @@ module Cap : sig
 
       [Looped], indicating that the top should loop around to the bottom of
       a sweep. *)
-  val looped : loop t
+  val looped : [> `Looped ]
 
   (** [capped ~top ~bot]
 
       Construct a {!Cap.t} specifying how the [top] and [bot] caps of a sweep
       extrusion should be sealed off (or not). *)
-  val capped : top:poly_spec -> bot:poly_spec -> caps t
+  val capped : top:poly_spec -> bot:poly_spec -> [> `Caps of caps ]
 
   (** [flat_caps]
 
       Default {!Cap.t} configuration for flat (no roundover) sealed caps. *)
-  val flat_caps : caps t
+  val flat_caps : [> `Caps of caps ]
 
   (** [open_caps]
 
       Default {!Cap.t} configuration for unsealed caps (open ends). *)
-  val open_caps : caps t
+  val open_caps : [> `Caps of caps ]
 end
 
 (** {2 Fixed polygon sweeps and extrusions} *)
@@ -456,8 +454,8 @@ val sweep
   :  ?style:style
   -> ?check_valid:[ `Quality of int | `No ]
   -> ?merge:bool
-  -> ?winding:[< `CCW | `CW | `NoCheck > `CCW `CW ]
-  -> ?caps:'c Cap.t
+  -> ?winding:[ `CCW | `CW | `NoCheck ]
+  -> ?caps:Cap.t
   -> transforms:Affine3.t list
   -> Poly2.t
   -> t
@@ -484,7 +482,7 @@ val extrude
   :  ?style:style
   -> ?check_valid:[ `Quality of int | `No ]
   -> ?merge:bool
-  -> ?winding:[< `CCW | `CW | `NoCheck > `CCW `CW ]
+  -> ?winding:[ `CCW | `CW | `NoCheck ]
   -> ?fa:float
   -> ?slices:int
   -> ?scale_ez:V2.t * V2.t
@@ -492,10 +490,34 @@ val extrude
   -> ?scale:V2.t
   -> ?twist:float
   -> ?center:bool
-  -> ?caps:Cap.caps Cap.t
+  -> ?caps:[ `Caps of Cap.caps ]
   -> height:float
   -> Poly2.t
   -> t
+
+(** [revolve ?angle poly]
+
+    Revolve a 2d polygon (defined within the X+ half-plane) around the z-axis. *)
+val revolve
+  :  ?style:
+       [< `Alt
+       | `Concave
+       | `Convex
+       | `Default
+       | `MinEdge
+       | `Quincunx > `Default
+       `Quincunx
+       ]
+  -> ?check_valid:[ `No | `Quality of int ]
+  -> ?merge:bool
+  -> ?winding:[ `CCW | `CW | `NoCheck ]
+  -> ?fn:int
+  -> ?fa:float
+  -> ?fs:float
+  -> ?shift:V2.t
+  -> ?angle:float
+  -> Poly2.t
+  -> Mesh0.t
 
 (** [path_extrude ?check_valid ?style ?merge ?winding ?caps ?euler
      ?scale_ez ?twist_ez ?scale ?twist ~path poly]
@@ -507,8 +529,8 @@ val path_extrude
   :  ?style:style
   -> ?check_valid:[ `Quality of int | `No ]
   -> ?merge:bool
-  -> ?winding:[< `CCW | `CW | `NoCheck > `CCW `CW ]
-  -> ?caps:'c Cap.t
+  -> ?winding:[ `CCW | `CW | `NoCheck ]
+  -> ?caps:Cap.t
   -> ?euler:bool
   -> ?scale_ez:V2.t * V2.t
   -> ?twist_ez:V2.t * V2.t
@@ -535,7 +557,7 @@ val helix_extrude
   -> ?twist_ez:V2.t * V2.t
   -> ?scale:V2.t
   -> ?twist:float
-  -> ?caps:Cap.caps Cap.t
+  -> ?caps:[ `Caps of Cap.caps ]
   -> ?left:bool
   -> n_turns:int
   -> pitch:float
@@ -567,8 +589,8 @@ val morphing_sweep
   :  ?style:style
   -> ?check_valid:[ `Quality of int | `No ]
   -> ?merge:bool
-  -> ?winding:[< `CCW | `CW | `NoCheck > `CCW `CW ]
-  -> ?caps:Cap.caps Cap.t
+  -> ?winding:[ `CCW | `CW | `NoCheck ]
+  -> ?caps:[ `Caps of Cap.caps ]
   -> ?outer_map:mapping
   -> ?hole_map:[ `Same | `Flat of mapping | `Mix of mapping list ]
   -> ?refine:int
@@ -587,7 +609,7 @@ val morph
   :  ?style:style
   -> ?check_valid:[ `Quality of int | `No ]
   -> ?merge:bool
-  -> ?winding:[< `CCW | `CW | `NoCheck > `CCW ]
+  -> ?winding:[ `CCW | `CW | `NoCheck ]
   -> ?fa:float
   -> ?slices:int
   -> ?scale_ez:V2.t * V2.t
@@ -595,7 +617,7 @@ val morph
   -> ?scale:V2.t
   -> ?twist:float
   -> ?center:bool
-  -> ?caps:Cap.caps Cap.t
+  -> ?caps:[ `Caps of Cap.caps ]
   -> ?outer_map:mapping
   -> ?hole_map:[ `Flat of mapping | `Mix of mapping list | `Same ]
   -> ?refine:int
@@ -614,8 +636,8 @@ val path_morph
   :  ?style:style
   -> ?check_valid:[ `Quality of int | `No ]
   -> ?merge:bool
-  -> ?winding:[< `CCW | `CW | `NoCheck > `CCW `CW ]
-  -> ?caps:Cap.caps Cap.t
+  -> ?winding:[ `CCW | `CW | `NoCheck ]
+  -> ?caps:[ `Caps of Cap.caps ]
   -> ?outer_map:mapping
   -> ?hole_map:[ `Flat of mapping | `Mix of mapping list | `Same ]
   -> ?refine:int
@@ -647,7 +669,7 @@ val helix_morph
   -> ?twist_ez:V2.t * V2.t
   -> ?scale:V2.t
   -> ?twist:float
-  -> ?caps:Cap.caps Cap.t
+  -> ?caps:[ `Caps of Cap.caps ]
   -> ?outer_map:mapping
   -> ?hole_map:[ `Flat of mapping | `Mix of mapping list | `Same ]
   -> ?refine:int

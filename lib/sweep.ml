@@ -54,20 +54,19 @@ module Cap = struct
     ; bot : poly_spec
     }
 
-  type loop = Loop
-
-  type 'c t =
-    | Looped : loop t
-    | Caps : caps -> caps t
+  type t =
+    [ `Looped
+    | `Caps of caps
+    ]
 
   let delta_mode = Delta
   let chamfer_mode = Chamfer
   let radius_mode ?fn ?fs ?fa () = Radius { fn; fs; fa }
   let round ?(mode = Delta) ?(holes = `Flip) outer = `Round { outer; holes; mode }
-  let looped = Looped
-  let capped ~top ~bot = Caps { top; bot }
-  let flat_caps = Caps { top = `Flat; bot = `Flat }
-  let open_caps = Caps { top = `Empty; bot = `Empty }
+  let looped = `Looped
+  let capped ~top ~bot = `Caps { top; bot }
+  let flat_caps = `Caps { top = `Flat; bot = `Flat }
+  let open_caps = `Caps { top = `Empty; bot = `Empty }
   let quantize = Math.quant ~q:(1. /. 1024.)
 
   let radius_of_roundover = function
@@ -234,12 +233,11 @@ type poly_morph =
       }
 
 let sweep'
-    (type c)
     ?style
     ?check_valid
     ?(merge = true)
     ?(winding = `CCW)
-    ?(caps : c Cap.t option)
+    ?caps
     ?progress
     ~transforms
     shape
@@ -470,9 +468,9 @@ let sweep'
   in
   let mesh =
     match caps, holes with
-    | Some (Caps { top; bot }), [] -> no_holes top bot
+    | Some (`Caps { top; bot }), [] -> no_holes top bot
     | None, [] -> no_holes `Flat `Flat
-    | Some Looped, _ ->
+    | Some `Looped, _ ->
       ( match shape with
       | Fixed Poly2.{ outer; holes } ->
         let f ~winding path =
@@ -482,7 +480,7 @@ let sweep'
         in
         Mesh0.join (f ~winding:outer_wind outer :: List.map (f ~winding:hole_wind) holes)
       | Morph _ -> invalid_arg "Cannot loop a morph (see skin)." )
-    | Some (Caps { top; bot }), holes -> with_holes top bot holes
+    | Some (`Caps { top; bot }), holes -> with_holes top bot holes
     | None, holes -> with_holes `Flat `Flat holes
   in
   if merge then Mesh0.merge_points mesh else mesh
@@ -534,7 +532,7 @@ let linear'
     | `Flat | `Empty -> 0.
     | `Round { outer = Offsets l; _ } -> List.fold_left (fun _ { z; _ } -> z) 0. l
   in
-  let (Caps { bot; top }) = caps in
+  let (`Caps { bot; top }) = caps in
   let bot_height = cap_height bot
   and top_height = cap_height top in
   let transforms =
@@ -837,3 +835,45 @@ let path_morph
     ?twist
     ~path
     (Morph { outer_map; hole_map; refine; ez; a; b })
+
+let revolve
+    ?style
+    ?check_valid
+    ?merge
+    ?winding
+    ?fn
+    ?fa
+    ?fs
+    ?(shift = v2 0. 0.)
+    ?angle
+    shape
+  =
+  let bb = Poly2.bbox shape in
+  if bb.min.x < 0.
+  then invalid_arg "Input shape must exist entirely in the X+ half-plane.";
+  let h = bb.max.y -. bb.min.y in
+  let steps = Util.helical_fragments ?fn ?fa ?fs bb.max.x in
+  let sk =
+    Affine3.(mul (ztrans (-.bb.min.y)) (skew ~xz:(shift.x /. h) ~yz:(shift.y /. h) ()))
+  in
+  let transforms =
+    let f =
+      let s = Float.of_int steps in
+      let rot =
+        match angle with
+        | None ->
+          fun i -> Float.(v3 (pi /. 2.) 0. ((2. *. pi) -. (of_int i *. 2. *. pi /. s)))
+        | Some a -> fun i -> Float.(v3 (pi /. 2.) 0. (a -. (of_int i *. a /. (s -. 1.))))
+      in
+      fun i -> Affine3.(mul sk (rotate (rot i)))
+    in
+    List.init steps f
+  and caps =
+    match angle with
+    | None -> looped
+    | Some a when Math.approx a (Float.pi *. 2.) -> looped
+    | Some a when a <= 0. || a > Float.pi *. 2. ->
+      invalid_arg "Angle of revolution must be between 0 and 2 pi."
+    | _ -> flat_caps
+  and progress = `AutoPoints in
+  sweep' ?style ?check_valid ?merge ?winding ~caps ~progress ~transforms (Fixed shape)
