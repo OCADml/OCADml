@@ -54,19 +54,20 @@ module Cap = struct
     ; bot : poly_spec
     }
 
-  type t =
-    [ `Looped
-    | `Caps of caps
-    ]
+  type loop = Loop
+
+  type 'c t =
+    | Looped : loop t
+    | Caps : caps -> caps t
 
   let delta_mode = Delta
   let chamfer_mode = Chamfer
   let radius_mode ?fn ?fs ?fa () = Radius { fn; fs; fa }
   let round ?(mode = Delta) ?(holes = `Flip) outer = `Round { outer; holes; mode }
-  let looped = `Looped
-  let capped ~top ~bot = `Caps { top; bot }
-  let flat_caps = `Caps { top = `Flat; bot = `Flat }
-  let open_caps = `Caps { top = `Empty; bot = `Empty }
+  let looped = Looped
+  let capped ~top ~bot = Caps { top; bot }
+  let flat_caps = Caps { top = `Flat; bot = `Flat }
+  let open_caps = Caps { top = `Empty; bot = `Empty }
   let quantize = Math.quant ~q:(1. /. 1024.)
 
   let radius_of_roundover = function
@@ -233,11 +234,12 @@ type poly_morph =
       }
 
 let sweep'
+    (type c)
     ?style
     ?check_valid
     ?(merge = true)
     ?(winding = `CCW)
-    ?(caps = flat_caps)
+    ?(caps : c Cap.t option)
     ?progress
     ~transforms
     shape
@@ -429,14 +431,48 @@ let sweep'
       and top_lid, top = cap `Top ~m:last_transform top_shape in
       bot_lid, top_lid, Mesh0.join [ bot; mid; top ]
   in
+  let no_holes top bot =
+    let top = poly_to_path_spec top
+    and bot = poly_to_path_spec bot in
+    let _, _, poly = morph ~winding ~top ~bot outer in
+    poly
+  and with_holes top bot holes =
+    let n_holes = List.length holes in
+    let top, top_holes, top_mode = unpack_poly_spec ~n_holes top
+    and bot, bot_holes, bot_mode = unpack_poly_spec ~n_holes bot in
+    let _, tunnel_bots, tunnel_tops, tunnels =
+      let f (i, bots, tops, tuns) hole =
+        let bot, top, tunnel =
+          morph
+            ~winding:hole_wind
+            ~sealed:false
+            ?top_mode
+            ?bot_mode
+            ~top:(top_holes i)
+            ~bot:(bot_holes i)
+            hole
+        in
+        i + 1, bot :: bots, top :: tops, tunnel :: tuns
+      in
+      List.fold_left f (0, [], [], []) holes
+    in
+    let validate =
+      match check_valid with
+      | Some `No -> false
+      | _ -> true
+    and outer_bot, outer_top, outer =
+      morph ~winding:outer_wind ~sealed:false ?top_mode ?bot_mode ~top ~bot outer
+    in
+    let bot_lid =
+      Mesh0.of_poly3 ~rev:true (Poly3.make ~validate ~holes:tunnel_bots outer_bot)
+    and top_lid = Mesh0.of_poly3 (Poly3.make ~validate ~holes:tunnel_tops outer_top) in
+    Mesh0.join (bot_lid :: top_lid :: outer :: tunnels)
+  in
   let mesh =
     match caps, holes with
-    | `Caps { top; bot }, [] ->
-      let top = poly_to_path_spec top
-      and bot = poly_to_path_spec bot in
-      let _, _, poly = morph ~winding ~top ~bot outer in
-      poly
-    | `Looped, _ ->
+    | Some (Caps { top; bot }), [] -> no_holes top bot
+    | None, [] -> no_holes `Flat `Flat
+    | Some Looped, _ ->
       ( match shape with
       | Fixed Poly2.{ outer; holes } ->
         let f ~winding path =
@@ -446,37 +482,8 @@ let sweep'
         in
         Mesh0.join (f ~winding:outer_wind outer :: List.map (f ~winding:hole_wind) holes)
       | Morph _ -> invalid_arg "Cannot loop a morph (see skin)." )
-    | `Caps { top; bot }, holes ->
-      let n_holes = List.length holes in
-      let top, top_holes, top_mode = unpack_poly_spec ~n_holes top
-      and bot, bot_holes, bot_mode = unpack_poly_spec ~n_holes bot in
-      let _, tunnel_bots, tunnel_tops, tunnels =
-        let f (i, bots, tops, tuns) hole =
-          let bot, top, tunnel =
-            morph
-              ~winding:hole_wind
-              ~sealed:false
-              ?top_mode
-              ?bot_mode
-              ~top:(top_holes i)
-              ~bot:(bot_holes i)
-              hole
-          in
-          i + 1, bot :: bots, top :: tops, tunnel :: tuns
-        in
-        List.fold_left f (0, [], [], []) holes
-      in
-      let validate =
-        match check_valid with
-        | Some `No -> false
-        | _ -> true
-      and outer_bot, outer_top, outer =
-        morph ~winding:outer_wind ~sealed:false ?top_mode ?bot_mode ~top ~bot outer
-      in
-      let bot_lid =
-        Mesh0.of_poly3 ~rev:true (Poly3.make ~validate ~holes:tunnel_bots outer_bot)
-      and top_lid = Mesh0.of_poly3 (Poly3.make ~validate ~holes:tunnel_tops outer_top) in
-      Mesh0.join (bot_lid :: top_lid :: outer :: tunnels)
+    | Some (Caps { top; bot }), holes -> with_holes top bot holes
+    | None, holes -> with_holes `Flat `Flat holes
   in
   if merge then Mesh0.merge_points mesh else mesh
 
@@ -488,7 +495,7 @@ let morphing_sweep
     ?check_valid
     ?merge
     ?winding
-    ?(caps = { top = `Flat; bot = `Flat })
+    ?(caps = flat_caps)
     ?(outer_map = `Direct `ByLen)
     ?(hole_map = `Same)
     ?refine
@@ -502,7 +509,7 @@ let morphing_sweep
     ~style
     ?merge
     ?winding
-    ~caps:(`Caps caps)
+    ~caps
     ~progress:`AutoDist
     ~transforms
     (Morph { outer_map; hole_map; refine; ez; a; b })
@@ -519,7 +526,7 @@ let linear'
     ?scale
     ?(twist = 0.)
     ?(center = false)
-    ?(caps = { top = `Flat; bot = `Flat })
+    ?(caps = flat_caps)
     ~height
     shape
   =
@@ -527,8 +534,9 @@ let linear'
     | `Flat | `Empty -> 0.
     | `Round { outer = Offsets l; _ } -> List.fold_left (fun _ { z; _ } -> z) 0. l
   in
-  let bot_height = cap_height caps.bot
-  and top_height = cap_height caps.top in
+  let (Caps { bot; top }) = caps in
+  let bot_height = cap_height bot
+  and top_height = cap_height top in
   let transforms =
     let h = height -. bot_height -. top_height
     and z = if center then height /. -2. else bot_height in
@@ -545,15 +553,7 @@ let linear'
       List.init (slices + 1) (fun i -> v3 0. 0. ((Float.of_int i *. s) +. z))
       |> Path3.to_transforms ?scale_ez ?twist_ez ?scale ?twist )
   in
-  sweep'
-    ?style
-    ?check_valid
-    ?merge
-    ?winding
-    ~caps:(`Caps caps)
-    ~progress:`AutoPoints
-    ~transforms
-    shape
+  sweep' ?style ?check_valid ?merge ?winding ~caps ~progress:`AutoPoints ~transforms shape
 
 let extrude
     ?style
@@ -635,7 +635,7 @@ let helix'
     ?twist_ez
     ?scale
     ?twist
-    ?(caps = { top = `Flat; bot = `Flat })
+    ?(caps = flat_caps)
     ?(left = true)
     ~n_turns
     ~pitch
@@ -662,7 +662,7 @@ let helix'
     ?check_valid
     ?merge
     ~winding:(if left then `CCW else `CW)
-    ~caps:(`Caps caps)
+    ~caps
     ~progress:`AutoPoints
     ~transforms
     shape
@@ -810,7 +810,7 @@ let path_morph
     ?check_valid
     ?merge
     ?winding
-    ?(caps = { top = `Flat; bot = `Flat })
+    ?(caps = flat_caps)
     ?(outer_map = `Direct `ByLen)
     ?(hole_map = `Same)
     ?refine
@@ -829,7 +829,7 @@ let path_morph
     ?check_valid
     ?merge
     ?winding
-    ~caps:(`Caps caps)
+    ~caps
     ?euler
     ?scale_ez
     ?twist_ez
