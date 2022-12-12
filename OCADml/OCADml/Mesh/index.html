@@ -28,15 +28,15 @@
   <span>?style:<a href="#type-style">style</a> <span class="arrow">&#45;&gt;</span></span>
   <span>?check_valid:<span>[ <span>`Quality of int</span> <span>| `No</span> ]</span> <span class="arrow">&#45;&gt;</span></span>
   <span>?merge:bool <span class="arrow">&#45;&gt;</span></span>
-  <span>?winding:<span>[&lt; `CCW <span>| `CW</span> <span>| `NoCheck</span> CCW CW ]</span> <span class="arrow">&#45;&gt;</span></span>
-  <span>?caps:<span><span class="type-var">'c</span> <a href="Cap/index.html#type-t">Cap.t</a></span> <span class="arrow">&#45;&gt;</span></span>
+  <span>?winding:<span>[ `CCW <span>| `CW</span> <span>| `NoCheck</span> ]</span> <span class="arrow">&#45;&gt;</span></span>
+  <span>?caps:<a href="Cap/index.html#type-t">Cap.t</a> <span class="arrow">&#45;&gt;</span></span>
   <span>transforms:<span><a href="../Affine3/index.html#type-t">Affine3.t</a> list</span> <span class="arrow">&#45;&gt;</span></span>
   <span><a href="../Poly2/index.html#type-t">Poly2.t</a> <span class="arrow">&#45;&gt;</span></span>
   <a href="#type-t">t</a></span></code></div><div class="spec-doc"><p><code>sweep ?check_valid ?style ?winding ?merge ?fn ?fs ?fa ?caps ~transforms poly</code></p><p>Sweep a 2d polygon into a 3d mesh by applying a sequence of <code>transforms</code> to the original shape. The <code>winding</code> parameter can be used to set automatic enforcement of polygon winding direction, which will impact the winding of the generated faces of the mesh. What is done with the endcaps can be specified with <code>caps</code>. By default the ends of the extrusion are sealed with flat faces, but they can instead be looped to eachother, left empty, or rounded over. If <code>style</code> is provided, it will be passed along to <a href="#val-of_rows"><code>of_rows</code></a>, which handles converting the swept shapes into a mesh.</p><p>If <code>merge</code> is <code>true</code> (as is default), <a href="#val-merge_points"><code>merge_points</code></a> is applied to the resulting mesh, as duplicate points are introduced when end caps are joined to the outer and inner meshes. If the duplicate points aren't a problem for you (they aren't <i>necessarily</i>), this can be turned off to save some compute.</p><p><code>check_valid</code> determines whether validity checks are performed during offset operations (see <a href="../Path2/index.html#val-offset"><code>Path2.offset</code></a>), for cap roundovers (if specified). Additionally, unless <code>check_valid</code> is <code>`No</code>, polygon validation will be performed with final outer and inner paths of the caps before their mesh is generated.</p></div></div><div class="odoc-spec"><div class="spec value" id="val-extrude" class="anchored"><a href="#val-extrude" class="anchor"></a><code><span><span class="keyword">val</span> extrude : 
   <span>?style:<a href="#type-style">style</a> <span class="arrow">&#45;&gt;</span></span>
   <span>?check_valid:<span>[ <span>`Quality of int</span> <span>| `No</span> ]</span> <span class="arrow">&#45;&gt;</span></span>
   <span>?merge:bool <span class="arrow">&#45;&gt;</span></span>
-  <span>?winding:<span>[&lt; `CCW <span>| `CW</span> <span>| `NoCheck</span> CCW CW ]</span> <span class="arrow">&#45;&gt;</span></span>
+  <span>?winding:<span>[ `CCW <span>| `CW</span> <span>| `NoCheck</span> ]</span> <span class="arrow">&#45;&gt;</span></span>
   <span>?fa:float <span class="arrow">&#45;&gt;</span></span>
   <span>?slices:int <span class="arrow">&#45;&gt;</span></span>
   <span>?scale_ez:<span>(<a href="../V2/index.html#type-t">V2.t</a> * <a href="../V2/index.html#type-t">V2.t</a>)</span> <span class="arrow">&#45;&gt;</span></span>
@@ -44,15 +44,32 @@
   <span>?scale:<a href="../V2/index.html#type-t">V2.t</a> <span class="arrow">&#45;&gt;</span></span>
   <span>?twist:float <span class="arrow">&#45;&gt;</span></span>
   <span>?center:bool <span class="arrow">&#45;&gt;</span></span>
-  <span>?caps:<span><a href="Cap/index.html#type-caps">Cap.caps</a> <a href="Cap/index.html#type-t">Cap.t</a></span> <span class="arrow">&#45;&gt;</span></span>
+  <span>?caps:<span>[ <span>`Caps of <a href="Cap/index.html#type-caps">Cap.caps</a></span> ]</span> <span class="arrow">&#45;&gt;</span></span>
   <span>height:float <span class="arrow">&#45;&gt;</span></span>
   <span><a href="../Poly2/index.html#type-t">Poly2.t</a> <span class="arrow">&#45;&gt;</span></span>
-  <a href="#type-t">t</a></span></code></div><div class="spec-doc"><p><code>extrude ~height poly</code></p><p>Vertically extrude a 2d polygon from the XY plane to <code>height</code>. If <code>?center</code> is true, the resulting 3D object is centered around the XY plane, rather than resting on top of it. Roundovers described by <code>caps</code> are taken into account such that the final shape conforms to the specified <code>height</code>. If <code>height</code> is less than the combined height of <code>caps</code>, there will simply be no &quot;mid-section&quot; (and the resulting height will not reflect the <code>height</code> parameter).</p><ul><li><code>?twist</code> rotates the shape by the specified angle as it is extruded upwards</li><li><code>?slices</code> specifies the number of intermediate points along the Z axis of the extrusion. By default this increases with the value of <code>?twist</code>, though manual refinement my improve results.</li><li><code>?scale</code> expands or contracts the shape in X and Y as it is extruded upward. Default is <code>(v2 1. 1.)</code>, no scaling.</li><li>Scaling/twisting proceed linearly by default, though bezier easing can be specified by providing handle points to the <code>scale_ez</code> and <code>twist_ez</code> parameter respectively. (see <a href="../Path3/index.html#val-scaler"><code>Path3.scaler</code></a> and <a href="../Path3/index.html#val-twister"><code>Path3.twister</code></a>).</li></ul></div></div><div class="odoc-spec"><div class="spec value" id="val-path_extrude" class="anchored"><a href="#val-path_extrude" class="anchor"></a><code><span><span class="keyword">val</span> path_extrude : 
+  <a href="#type-t">t</a></span></code></div><div class="spec-doc"><p><code>extrude ~height poly</code></p><p>Vertically extrude a 2d polygon from the XY plane to <code>height</code>. If <code>?center</code> is true, the resulting 3D object is centered around the XY plane, rather than resting on top of it. Roundovers described by <code>caps</code> are taken into account such that the final shape conforms to the specified <code>height</code>. If <code>height</code> is less than the combined height of <code>caps</code>, there will simply be no &quot;mid-section&quot; (and the resulting height will not reflect the <code>height</code> parameter).</p><ul><li><code>?twist</code> rotates the shape by the specified angle as it is extruded upwards</li><li><code>?slices</code> specifies the number of intermediate points along the Z axis of the extrusion. By default this increases with the value of <code>?twist</code>, though manual refinement my improve results.</li><li><code>?scale</code> expands or contracts the shape in X and Y as it is extruded upward. Default is <code>(v2 1. 1.)</code>, no scaling.</li><li>Scaling/twisting proceed linearly by default, though bezier easing can be specified by providing handle points to the <code>scale_ez</code> and <code>twist_ez</code> parameter respectively. (see <a href="../Path3/index.html#val-scaler"><code>Path3.scaler</code></a> and <a href="../Path3/index.html#val-twister"><code>Path3.twister</code></a>).</li></ul></div></div><div class="odoc-spec"><div class="spec value" id="val-revolve" class="anchored"><a href="#val-revolve" class="anchor"></a><code><span><span class="keyword">val</span> revolve : 
+  <span>?style:
+    <span>[&lt; `Alt
+    <span>| `Concave</span>
+    <span>| `Convex</span>
+    <span>| `Default</span>
+    <span>| `MinEdge</span>
+    <span>| `Quincunx</span> Default Quincunx ]</span> <span class="arrow">&#45;&gt;</span></span>
+  <span>?check_valid:<span>[ `No <span><span>| `Quality</span> of int</span> ]</span> <span class="arrow">&#45;&gt;</span></span>
+  <span>?merge:bool <span class="arrow">&#45;&gt;</span></span>
+  <span>?winding:<span>[ `CCW <span>| `CW</span> <span>| `NoCheck</span> ]</span> <span class="arrow">&#45;&gt;</span></span>
+  <span>?fn:int <span class="arrow">&#45;&gt;</span></span>
+  <span>?fa:float <span class="arrow">&#45;&gt;</span></span>
+  <span>?fs:float <span class="arrow">&#45;&gt;</span></span>
+  <span>?shift:<a href="../V2/index.html#type-t">V2.t</a> <span class="arrow">&#45;&gt;</span></span>
+  <span>?angle:float <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../Poly2/index.html#type-t">Poly2.t</a> <span class="arrow">&#45;&gt;</span></span>
+  <span class="xref-unresolved">OCADml__Mesh0.t</span></span></code></div><div class="spec-doc"><p><code>revolve ?angle poly</code></p><p>Revolve a 2d polygon (defined within the X+ half-plane) around the z-axis.</p></div></div><div class="odoc-spec"><div class="spec value" id="val-path_extrude" class="anchored"><a href="#val-path_extrude" class="anchor"></a><code><span><span class="keyword">val</span> path_extrude : 
   <span>?style:<a href="#type-style">style</a> <span class="arrow">&#45;&gt;</span></span>
   <span>?check_valid:<span>[ <span>`Quality of int</span> <span>| `No</span> ]</span> <span class="arrow">&#45;&gt;</span></span>
   <span>?merge:bool <span class="arrow">&#45;&gt;</span></span>
-  <span>?winding:<span>[&lt; `CCW <span>| `CW</span> <span>| `NoCheck</span> CCW CW ]</span> <span class="arrow">&#45;&gt;</span></span>
-  <span>?caps:<span><span class="type-var">'c</span> <a href="Cap/index.html#type-t">Cap.t</a></span> <span class="arrow">&#45;&gt;</span></span>
+  <span>?winding:<span>[ `CCW <span>| `CW</span> <span>| `NoCheck</span> ]</span> <span class="arrow">&#45;&gt;</span></span>
+  <span>?caps:<a href="Cap/index.html#type-t">Cap.t</a> <span class="arrow">&#45;&gt;</span></span>
   <span>?euler:bool <span class="arrow">&#45;&gt;</span></span>
   <span>?scale_ez:<span>(<a href="../V2/index.html#type-t">V2.t</a> * <a href="../V2/index.html#type-t">V2.t</a>)</span> <span class="arrow">&#45;&gt;</span></span>
   <span>?twist_ez:<span>(<a href="../V2/index.html#type-t">V2.t</a> * <a href="../V2/index.html#type-t">V2.t</a>)</span> <span class="arrow">&#45;&gt;</span></span>
@@ -72,7 +89,7 @@
   <span>?twist_ez:<span>(<a href="../V2/index.html#type-t">V2.t</a> * <a href="../V2/index.html#type-t">V2.t</a>)</span> <span class="arrow">&#45;&gt;</span></span>
   <span>?scale:<a href="../V2/index.html#type-t">V2.t</a> <span class="arrow">&#45;&gt;</span></span>
   <span>?twist:float <span class="arrow">&#45;&gt;</span></span>
-  <span>?caps:<span><a href="Cap/index.html#type-caps">Cap.caps</a> <a href="Cap/index.html#type-t">Cap.t</a></span> <span class="arrow">&#45;&gt;</span></span>
+  <span>?caps:<span>[ <span>`Caps of <a href="Cap/index.html#type-caps">Cap.caps</a></span> ]</span> <span class="arrow">&#45;&gt;</span></span>
   <span>?left:bool <span class="arrow">&#45;&gt;</span></span>
   <span>n_turns:int <span class="arrow">&#45;&gt;</span></span>
   <span>pitch:float <span class="arrow">&#45;&gt;</span></span>
@@ -84,8 +101,8 @@
   <span>?style:<a href="#type-style">style</a> <span class="arrow">&#45;&gt;</span></span>
   <span>?check_valid:<span>[ <span>`Quality of int</span> <span>| `No</span> ]</span> <span class="arrow">&#45;&gt;</span></span>
   <span>?merge:bool <span class="arrow">&#45;&gt;</span></span>
-  <span>?winding:<span>[&lt; `CCW <span>| `CW</span> <span>| `NoCheck</span> CCW CW ]</span> <span class="arrow">&#45;&gt;</span></span>
-  <span>?caps:<span><a href="Cap/index.html#type-caps">Cap.caps</a> <a href="Cap/index.html#type-t">Cap.t</a></span> <span class="arrow">&#45;&gt;</span></span>
+  <span>?winding:<span>[ `CCW <span>| `CW</span> <span>| `NoCheck</span> ]</span> <span class="arrow">&#45;&gt;</span></span>
+  <span>?caps:<span>[ <span>`Caps of <a href="Cap/index.html#type-caps">Cap.caps</a></span> ]</span> <span class="arrow">&#45;&gt;</span></span>
   <span>?outer_map:<a href="#type-mapping">mapping</a> <span class="arrow">&#45;&gt;</span></span>
   <span>?hole_map:<span>[ `Same <span><span>| `Flat</span> of <a href="#type-mapping">mapping</a></span> <span><span>| `Mix</span> of <span><a href="#type-mapping">mapping</a> list</span></span> ]</span> <span class="arrow">&#45;&gt;</span></span>
   <span>?refine:int <span class="arrow">&#45;&gt;</span></span>
@@ -97,7 +114,7 @@
   <span>?style:<a href="#type-style">style</a> <span class="arrow">&#45;&gt;</span></span>
   <span>?check_valid:<span>[ <span>`Quality of int</span> <span>| `No</span> ]</span> <span class="arrow">&#45;&gt;</span></span>
   <span>?merge:bool <span class="arrow">&#45;&gt;</span></span>
-  <span>?winding:<span>[&lt; `CCW <span>| `CW</span> <span>| `NoCheck</span> CCW ]</span> <span class="arrow">&#45;&gt;</span></span>
+  <span>?winding:<span>[ `CCW <span>| `CW</span> <span>| `NoCheck</span> ]</span> <span class="arrow">&#45;&gt;</span></span>
   <span>?fa:float <span class="arrow">&#45;&gt;</span></span>
   <span>?slices:int <span class="arrow">&#45;&gt;</span></span>
   <span>?scale_ez:<span>(<a href="../V2/index.html#type-t">V2.t</a> * <a href="../V2/index.html#type-t">V2.t</a>)</span> <span class="arrow">&#45;&gt;</span></span>
@@ -105,7 +122,7 @@
   <span>?scale:<a href="../V2/index.html#type-t">V2.t</a> <span class="arrow">&#45;&gt;</span></span>
   <span>?twist:float <span class="arrow">&#45;&gt;</span></span>
   <span>?center:bool <span class="arrow">&#45;&gt;</span></span>
-  <span>?caps:<span><a href="Cap/index.html#type-caps">Cap.caps</a> <a href="Cap/index.html#type-t">Cap.t</a></span> <span class="arrow">&#45;&gt;</span></span>
+  <span>?caps:<span>[ <span>`Caps of <a href="Cap/index.html#type-caps">Cap.caps</a></span> ]</span> <span class="arrow">&#45;&gt;</span></span>
   <span>?outer_map:<a href="#type-mapping">mapping</a> <span class="arrow">&#45;&gt;</span></span>
   <span>?hole_map:<span>[ <span>`Flat of <a href="#type-mapping">mapping</a></span> <span><span>| `Mix</span> of <span><a href="#type-mapping">mapping</a> list</span></span> <span>| `Same</span> ]</span> <span class="arrow">&#45;&gt;</span></span>
   <span>?refine:int <span class="arrow">&#45;&gt;</span></span>
@@ -117,8 +134,8 @@
   <span>?style:<a href="#type-style">style</a> <span class="arrow">&#45;&gt;</span></span>
   <span>?check_valid:<span>[ <span>`Quality of int</span> <span>| `No</span> ]</span> <span class="arrow">&#45;&gt;</span></span>
   <span>?merge:bool <span class="arrow">&#45;&gt;</span></span>
-  <span>?winding:<span>[&lt; `CCW <span>| `CW</span> <span>| `NoCheck</span> CCW CW ]</span> <span class="arrow">&#45;&gt;</span></span>
-  <span>?caps:<span><a href="Cap/index.html#type-caps">Cap.caps</a> <a href="Cap/index.html#type-t">Cap.t</a></span> <span class="arrow">&#45;&gt;</span></span>
+  <span>?winding:<span>[ `CCW <span>| `CW</span> <span>| `NoCheck</span> ]</span> <span class="arrow">&#45;&gt;</span></span>
+  <span>?caps:<span>[ <span>`Caps of <a href="Cap/index.html#type-caps">Cap.caps</a></span> ]</span> <span class="arrow">&#45;&gt;</span></span>
   <span>?outer_map:<a href="#type-mapping">mapping</a> <span class="arrow">&#45;&gt;</span></span>
   <span>?hole_map:<span>[ <span>`Flat of <a href="#type-mapping">mapping</a></span> <span><span>| `Mix</span> of <span><a href="#type-mapping">mapping</a> list</span></span> <span>| `Same</span> ]</span> <span class="arrow">&#45;&gt;</span></span>
   <span>?refine:int <span class="arrow">&#45;&gt;</span></span>
@@ -142,7 +159,7 @@
   <span>?twist_ez:<span>(<a href="../V2/index.html#type-t">V2.t</a> * <a href="../V2/index.html#type-t">V2.t</a>)</span> <span class="arrow">&#45;&gt;</span></span>
   <span>?scale:<a href="../V2/index.html#type-t">V2.t</a> <span class="arrow">&#45;&gt;</span></span>
   <span>?twist:float <span class="arrow">&#45;&gt;</span></span>
-  <span>?caps:<span><a href="Cap/index.html#type-caps">Cap.caps</a> <a href="Cap/index.html#type-t">Cap.t</a></span> <span class="arrow">&#45;&gt;</span></span>
+  <span>?caps:<span>[ <span>`Caps of <a href="Cap/index.html#type-caps">Cap.caps</a></span> ]</span> <span class="arrow">&#45;&gt;</span></span>
   <span>?outer_map:<a href="#type-mapping">mapping</a> <span class="arrow">&#45;&gt;</span></span>
   <span>?hole_map:<span>[ <span>`Flat of <a href="#type-mapping">mapping</a></span> <span><span>| `Mix</span> of <span><a href="#type-mapping">mapping</a> list</span></span> <span>| `Same</span> ]</span> <span class="arrow">&#45;&gt;</span></span>
   <span>?refine:int <span class="arrow">&#45;&gt;</span></span>
