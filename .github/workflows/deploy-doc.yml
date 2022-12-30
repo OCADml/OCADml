@@ -12,10 +12,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Use OCaml 4.13.x
+      - name: Use OCaml 4.14.x
         uses: ocaml/setup-ocaml@v2
         with:
-          ocaml-compiler: 4.13.x
+          ocaml-compiler: 4.14.x
 
       - run: opam install . --deps-only --with-doc
 
