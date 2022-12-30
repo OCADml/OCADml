@@ -562,3 +562,92 @@ let xscale x t = { t with points = Path3.xscale x t.points }
 let yscale y t = { t with points = Path3.yscale y t.points }
 let zscale z t = { t with points = Path3.zscale z t.points }
 let mirror ax t = rev_faces { t with points = Path3.mirror ax t.points }
+
+let to_binstl ~rev path t =
+  let pts =
+    let a = Array.make t.size (List.hd t.points) in
+    List.iteri (fun i p -> a.(i) <- p) t.points;
+    a
+  and write_unsigned_long oc n =
+    Out_channel.output_byte oc ((n lsr 0) land 0xFF);
+    Out_channel.output_byte oc ((n lsr 8) land 0xFF);
+    Out_channel.output_byte oc ((n lsr 16) land 0xFF);
+    Out_channel.output_byte oc ((n lsr 24) land 0xFF)
+  in
+  let write_float oc n = write_unsigned_long oc Int32.(to_int @@ bits_of_float n) in
+  let write_v3 oc V3.{ x; y; z } =
+    write_float oc x;
+    write_float oc y;
+    write_float oc z
+  in
+  let f oc =
+    (* header *)
+    let bs = Bytes.make 80 ' '
+    and header = "OCADml Mesh" in
+    Bytes.blit_string header 0 bs 0 (String.length header);
+    Bytes.set bs 79 '\n';
+    Out_channel.output_bytes oc bs;
+    (* number of facets *)
+    write_unsigned_long oc (List.length t.faces);
+    List.iter
+      (function
+        | [ a; b; c ] ->
+          let a, b, c =
+            if rev then pts.(c), pts.(b), pts.(a) else pts.(a), pts.(b), pts.(c)
+          in
+          (* facet normal *)
+          let normal = V3.(normalize @@ cross (sub c a) (sub b a)) in
+          write_v3 oc normal;
+          (* vertices *)
+          write_v3 oc a;
+          write_v3 oc b;
+          write_v3 oc c;
+          (* attribute byte count (set to zero) *)
+          Out_channel.output_string oc "\000\000"
+        | _ -> failwith "Mesh should be triangulated for stl serialization." )
+      t.faces
+  in
+  Out_channel.with_open_bin path f
+
+let to_stl ~rev path t =
+  let pts =
+    let a = Array.make t.size (List.hd t.points) in
+    List.iteri (fun i p -> a.(i) <- p) t.points;
+    a
+  and write_v3 oc V3.{ x; y; z } =
+    Out_channel.output_string oc (Float.to_string x);
+    Out_channel.output_char oc ' ';
+    Out_channel.output_string oc (Float.to_string y);
+    Out_channel.output_char oc ' ';
+    Out_channel.output_string oc (Float.to_string z)
+  in
+  let write_vertex oc v =
+    Out_channel.output_string oc "\n      vertex ";
+    write_v3 oc v
+  in
+  let f oc =
+    Printf.fprintf oc "solid OSCADml_Mesh";
+    List.iter
+      (function
+        | [ a; b; c ] ->
+          let a, b, c =
+            if rev then pts.(c), pts.(b), pts.(a) else pts.(a), pts.(b), pts.(c)
+          in
+          let normal = V3.(normalize @@ cross (sub c a) (sub b a)) in
+          Out_channel.output_string oc "\n  facet normal ";
+          write_v3 oc normal;
+          Out_channel.output_string oc "\n    outer loop";
+          write_vertex oc a;
+          write_vertex oc b;
+          write_vertex oc c;
+          Out_channel.output_string oc "\n    endloop";
+          Out_channel.output_string oc "\n  endfacet"
+        | _ -> failwith "Mesh should be triangulated for stl serialization." )
+      t.faces;
+    Printf.fprintf oc "\nendsolid OSCADml_Mesh\n"
+  in
+  Out_channel.with_open_bin path f
+
+let to_stl ?(ascii = false) ?(rev = true) ?eps path t =
+  let t = triangulate ?eps @@ merge_points ?eps t in
+  if ascii then to_stl ~rev path t else to_binstl ~rev path t

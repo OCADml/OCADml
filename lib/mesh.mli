@@ -886,3 +886,20 @@ val xscale : float -> t -> t
 val yscale : float -> t -> t
 val zscale : float -> t -> t
 val mirror : V3.t -> t -> t
+
+(** {1 Output} *)
+
+(** [to_stl ?ascii ?rev ?eps path t]
+
+    Write the mesh [t] to disk at [path] as an
+    {{:https://en.wikipedia.org/wiki/STL_(file_format)} stl}. Binary serialization
+    is performed by default, but the [ascii] format is also available.
+
+    - [eps] can be provided to control the precision of point deduplication and face
+    triangulation operations required befor export (default is [1e-6])
+    - As OCADml meshes ({!type:t}) are typically generated to follow the CCW
+    inner face convention of OpenSCAD, this can result in normals pointing the
+    opposite direction expected by other programs with which you may want to
+    use the output [stl]. Thus facets are reversed by default during
+    serialization, however this can be avoided by setting [~rev:false]. *)
+val to_stl : ?ascii:bool -> ?rev:bool -> ?eps:float -> string -> t -> unit

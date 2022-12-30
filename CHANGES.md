@@ -1,3 +1,7 @@
+## v0.2.1
+
+- Add `Mesh.to_stl` (serialization to bin/ascii stl format)
+
 ## v0.2.0
 - Use v4 type for `Plane.t` abstract it and add type conversions
 - `Mesh.extrude` altered to return mid-sectionless shape when `~height` is less
