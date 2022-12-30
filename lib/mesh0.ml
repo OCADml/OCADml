@@ -626,7 +626,7 @@ let to_stl ~rev path t =
     write_v3 oc v
   in
   let f oc =
-    Printf.fprintf oc "solid OSCADml_Mesh";
+    Printf.fprintf oc "solid OCADml_Mesh";
     List.iter
       (function
         | [ a; b; c ] ->
@@ -644,7 +644,7 @@ let to_stl ~rev path t =
           Out_channel.output_string oc "\n  endfacet"
         | _ -> failwith "Mesh should be triangulated for stl serialization." )
       t.faces;
-    Printf.fprintf oc "\nendsolid OSCADml_Mesh\n"
+    Printf.fprintf oc "\nendsolid OCADml_Mesh\n"
   in
   Out_channel.with_open_bin path f
 
