@@ -432,7 +432,7 @@ module Make (V : V.S) = struct
           let d = V.distance hd p in
           if d > dist then i + 1, i, p, d else i + 1, idx, fp, dist
         in
-        List.fold_left f (1, 1, p, V.distance hd p) tl
+        List.fold_left f (2, 1, p, V.distance hd p) tl
       in
       if dist <= eps
       then None

@@ -503,7 +503,7 @@ let hull = function
       let rec loop i = function
         | [] -> None
         | hd :: tl ->
-          if not (Float.abs (Plane.distance_to_point plane hd) < Util.epsilon)
+          if Float.abs (Plane.distance_to_point plane hd) > Util.epsilon
           then Some i
           else loop (i + 1) tl
       in
