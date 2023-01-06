@@ -1,3 +1,7 @@
+## v0.2.2
+
+- fix correctness bug in `Path.noncollinear_triple`
+
 ## v0.2.1
 
 - Add `Mesh.to_stl` (serialization to bin/ascii stl format)
