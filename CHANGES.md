@@ -1,7 +1,8 @@
 ## v0.3.0
 
 - add gg library dependency
-- replaced vector (V{2,3,4}.t) and matrix (Affine{2,3}) types with those from gg
+- replaced vector (V{2,3,4}.t), matrix (Affine{2,3}), and bounding box types
+ with those from gg
 - protect bezier memoization with mutex (OCaml 5 compatibility)
 
 ## v0.2.2
