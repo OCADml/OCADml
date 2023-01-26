@@ -5,7 +5,7 @@ let clockwise_sign' ?(eps = Util.epsilon) (ps : V2.t array) =
   for i = 0 to len - 1 do
     let p1 = ps.(Util.index_wrap ~len i)
     and p2 = ps.(Util.index_wrap ~len (i + 1)) in
-    sum := !sum +. ((p1.x -. p2.x) *. (p1.y +. p2.y))
+    sum := !sum +. V2.((x p1 -. x p2) *. (y p1 +. y p2))
   done;
   if Math.approx ~eps !sum 0. then 0. else Float.(of_int @@ compare !sum 0.)
 
@@ -21,7 +21,7 @@ let segment_extension s1 s2 =
   else (
     match V2.line_intersection s1 s2 with
     | Some inter -> inter
-    | None       -> failwith "Offset: path contains segment that reverses direction." )
+    | None -> failwith "Offset: path contains segment that reverses direction." )
 
 let chamfer ~centre ~delta p1 p2 p3 =
   let endline =
@@ -30,7 +30,7 @@ let chamfer ~centre ~delta p1 p2 p3 =
       let intersect =
         match V2.(line_intersection seg { a = centre; b = p2 }) with
         | Some p -> p
-        | None   -> failwith "Offset: chamfer centre line is parallel (no intersect)"
+        | None -> failwith "Offset: chamfer centre line is parallel (no intersect)"
       in
       Math.sign delta *. V2.(norm (centre -@ intersect))
     in
@@ -43,7 +43,7 @@ let chamfer ~centre ~delta p1 p2 p3 =
       , line_intersection endline { a = p2; b = p3 } ))
   with
   | Some i1, Some i2 -> [ i1; i2 ]
-  | _                -> [ p2 ]
+  | _ -> [ p2 ]
 
 (* If any part of a segment is further than distance d from the path (original
     path/outline before offseting). The number of points sampled along the
@@ -126,7 +126,7 @@ let offset'
   let good =
     match check_valid with
     | `Quality quality -> good_segments ~quality ~closed ~d path shifted_segs
-    | `No              -> Array.make len true
+    | `No -> Array.make len true
   in
   let n_good = Array.fold_left (fun sum b -> Bool.to_int b + sum) 0 good in
   if n_good = 0 then failwith "Offset of path is degenerate";
@@ -169,7 +169,7 @@ let offset'
   let new_corners, point_counts =
     let round i = inside_corner.(i) && (closed || (i <> 0 && i <> n_good - 1)) in
     match mode with
-    | `Delta   -> Array.to_list sharp_corners, List.init n_good (fun _ -> 1)
+    | `Delta -> Array.to_list sharp_corners, List.init n_good (fun _ -> 1)
     | `Chamfer ->
       let f i =
         if round i
@@ -181,7 +181,7 @@ let offset'
       in
       let l = List.init n_good f in
       List.concat l, List.map List.length l
-    | `Radius  ->
+    | `Radius ->
       let f i =
         if round i
         then (
@@ -209,8 +209,8 @@ let offset'
     then new_corners
     else (
       let rec aux acc = function
-        | []       -> acc
-        | [ _ ]    -> good_segs.(n_good - 1).b :: acc
+        | [] -> acc
+        | [ _ ] -> good_segs.(n_good - 1).b :: acc
         | hd :: tl -> aux (hd :: acc) tl
       in
       good_segs.(0).a :: (List.rev @@ aux [] (List.tl new_corners)) )

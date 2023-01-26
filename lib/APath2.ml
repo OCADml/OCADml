@@ -1,12 +1,10 @@
-open V
-
 let clockwise_sign ?(eps = Util.epsilon) (ps : V2.t array) =
   let len = Array.length ps
   and sum = ref 0. in
   for i = 0 to len - 1 do
     let p1 = ps.(Util.index_wrap ~len i)
     and p2 = ps.(Util.index_wrap ~len (i + 1)) in
-    sum := !sum +. ((p1.x -. p2.x) *. (p1.y +. p2.y))
+    sum := !sum +. V2.((x p1 -. x p2) *. (y p1 +. y p2))
   done;
   if Math.approx ~eps !sum 0. then 0. else Float.(of_int @@ compare !sum 0.)
 
@@ -23,7 +21,7 @@ let self_intersections ?(eps = Util.epsilon) ?(closed = false) path =
       let l1 = V2.{ a = path.(i); b = path.(i + 1) } in
       let seg_normal =
         let d = V2.sub l1.b l1.a in
-        V2.(normalize (v (-.d.y) d.x))
+        V2.(normalize (v (-.y d) (x d)))
       in
       let ref_v = V2.dot path.(i) seg_normal
       and last_signal = ref 0

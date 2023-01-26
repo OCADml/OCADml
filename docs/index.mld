@@ -1,6 +1,7 @@
 {0 OCADml}
 
-OCADml is a collection of types and functions facilitating Computer Aided
+OCADml is a collection of types and functions built on top of
+{{:https://erratique.ch/software/gg} Gg} facilitating Computer Aided
 Design (CAD) in OCaml. In particular, the style of design currently supported is
 that of 2D drawing and mesh generation via sweeping/extrusion.
 

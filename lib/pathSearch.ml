@@ -10,7 +10,7 @@ module TangentSign2 = struct
   let tangent_sign (l1 : line) (l2 : line) =
     let a = sub l1.a l1.b
     and b = sub l2.a l2.b in
-    let V.{ z; _ } = cross a b in
+    let z = V3.z @@ cross a b in
     if Float.abs z <= Util.epsilon *. norm a *. norm b then 0. else Math.sign z
 end
 
@@ -46,7 +46,7 @@ struct
 
   let closest_tangent ?(closed = true) ?(offset = V.zero) ~line curve =
     match curve with
-    | [] | [ _ ]     -> invalid_arg "Curved path has too few points."
+    | [] | [ _ ] -> invalid_arg "Curved path has too few points."
     | p0 :: p1 :: tl ->
       let angle_sign tangent = TS.tangent_sign line tangent in
       let f (i, min_cross, nearest_tangent, last_sign, last_tangent) p =
@@ -73,5 +73,5 @@ struct
       in
       ( match tangent with
       | Some tangent -> tangent
-      | None         -> failwith "No appropriate tangent points found." )
+      | None -> failwith "No appropriate tangent points found." )
 end

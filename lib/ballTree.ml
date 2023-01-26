@@ -61,12 +61,12 @@ module Proj2 = struct
     and mx = ref points.(idxs.(0))
     and len = Array.length idxs in
     for i = 1 to len - 1 do
-      let V2.{ x; y } = points.(idxs.(i)) in
-      (mn := Float.{ x = min !mn.x x; y = min !mn.y y });
-      mx := Float.{ x = max !mx.x x; y = max !mx.y y }
+      let p = points.(idxs.(i)) in
+      (mn := V2.(v (min (x !mn) (x p)) (min (y !mn) (y p))));
+      mx := V2.(v (max (x !mx) (x p)) (max (y !mx) (y p)))
     done;
-    let V2.{ x = dx; y = dy } = V2.sub !mx !mn in
-    let project = if dx >= dy then V2.get_x else V2.get_y in
+    let d = V2.sub !mx !mn in
+    let project = if V2.(x d >= y d) then V2.x else V2.y in
     Array.map (fun idx -> project points.(idx)) idxs
 end
 
@@ -76,17 +76,20 @@ module Proj3 = struct
     and mx = ref points.(idxs.(0))
     and len = Array.length idxs in
     for i = 1 to len - 1 do
-      let V3.{ x; y; z } = points.(idxs.(i)) in
-      (mn := Float.{ x = min !mn.x x; y = min !mn.y y; z = min !mn.z z });
-      mx := Float.{ x = max !mx.x x; y = max !mx.y y; z = max !mx.z z }
+      let p = points.(idxs.(i)) in
+      (mn := V3.(v (min (x !mn) (x p)) (min (y !mn) (y p)) (min (z !mn) (z p))));
+      mx := V3.(v (max (x !mx) (x p)) (max (y !mx) (y p)) (max (z !mx) (z p)))
     done;
-    let V3.{ x = dx; y = dy; z = dz } = V3.sub !mx !mn in
+    let d = V3.sub !mx !mn in
+    let dx = V3.x d
+    and dy = V3.y d
+    and dz = V3.z d in
     let project =
       match Float.(compare dx dy, compare dx dz, compare dy dz) with
-      | 1, 1, _   -> V3.get_x
-      | -1, _, 1  -> V3.get_y
-      | _, -1, -1 -> V3.get_z
-      | _         -> V3.get_x
+      | 1, 1, _ -> V3.x
+      | -1, _, 1 -> V3.y
+      | _, -1, -1 -> V3.z
+      | _ -> V3.x
     in
     Array.map (fun idx -> project points.(idx)) idxs
 end

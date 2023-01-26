@@ -1,4 +1,4 @@
-type t = V.v4 =
+type t =
   { x : float
   ; y : float
   ; z : float
@@ -8,9 +8,12 @@ type t = V.v4 =
 let id = { x = 0.; y = 0.; z = 0.; w = 1. }
 
 let make ax angle =
-  let V.{ x; y; z } = V3.normalize ax in
+  let ax = V3.normalize ax in
   let s = Float.sin (angle /. 2.) in
-  { x = x *. s; y = y *. s; z = z *. s; w = Float.cos (angle /. 2.) }
+  let x = V3.x ax *. s
+  and y = V3.y ax *. s
+  and z = V3.z ax *. s in
+  { x; y; z; w = Float.cos (angle /. 2.) }
 
 let basic_op op a b = { x = op a.x b.x; y = op a.y b.y; z = op a.z b.z; w = op a.w b.w }
 let add = basic_op ( +. )
@@ -39,7 +42,10 @@ let dot a b = (a.x *. b.x) +. (a.y *. b.y) +. (a.z *. b.z) +. (a.w *. b.w)
 let conj t = { x = -.t.x; y = -.t.y; z = -.t.z; w = t.w }
 let distance a b = norm (sub a b)
 
-let of_euler V.{ x = roll; y = pitch; z = yaw } =
+let of_euler rot =
+  let roll = V3.x rot
+  and pitch = V3.y rot
+  and yaw = V3.z rot in
   let open Float in
   let cy = cos (yaw *. 0.5)
   and sy = sin (yaw *. 0.5)
@@ -64,40 +70,39 @@ let to_euler { x; y; z; w } =
   and zx = z *. x
   and zy = z *. y
   and xy = x *. y in
-  V3.
-    { x = Float.atan2 (2. *. (zy +. wx)) (ww -. xx -. yy +. zz)
-    ; y = Float.asin (-2. *. (zx -. wy))
-    ; z = Float.atan2 (2. *. (xy +. wz)) (ww +. xx -. yy -. zz)
-    }
+  let x = Float.atan2 (2. *. (zy +. wx)) (ww -. xx -. yy +. zz)
+  and y = Float.asin (-2. *. (zx -. wy))
+  and z = Float.atan2 (2. *. (xy +. wz)) (ww +. xx -. yy -. zz) in
+  V3.v x y z
 
-let to_affine ?(trans = V3.zero) { x; y; z; w } =
+let to_affine ?(trans = V3.zero) t =
   let s =
-    let len_sqr = (x *. x) +. (y *. y) +. (z *. z) +. (w *. w) in
+    let len_sqr = (t.x *. t.x) +. (t.y *. t.y) +. (t.z *. t.z) +. (t.w *. t.w) in
     if len_sqr != 0. then 2. /. len_sqr else 0.
   in
-  let V.({ z = zs; _ } as xyzs) = V3.(smul (v x y z) s) in
-  let V.{ x = xsw; y = ysw; z = zsw } = V3.smul xyzs w in
-  let V.{ x = xsx; y = ysx; z = zsx } = V3.smul xyzs x
-  and V.{ y = ysy; z = zsy; _ } = V3.smul xyzs y
-  and zsz = z *. zs in
-  Affine3.
-    { r0c0 = 1. -. ysy -. zsz
-    ; r0c1 = ysx -. zsw
-    ; r0c2 = zsx +. ysw
-    ; r0c3 = trans.x
-    ; r1c0 = ysx +. zsw
-    ; r1c1 = 1. -. xsx -. zsz
-    ; r1c2 = zsy -. xsw
-    ; r1c3 = trans.y
-    ; r2c0 = zsx -. ysw
-    ; r2c1 = zsy +. xsw
-    ; r2c2 = 1. -. xsx -. ysy
-    ; r2c3 = trans.z
-    ; r3c0 = 0.
-    ; r3c1 = 0.
-    ; r3c2 = 0.
-    ; r3c3 = 1.
-    }
+  let xyzs = V3.smul (V.v3 t.x t.y t.z) s in
+  let sw = V3.smul xyzs t.w in
+  let sx = V3.smul xyzs t.x
+  and sy = V3.smul xyzs t.y
+  and zsz = t.z *. V3.z xyzs in
+  let open V3 in
+  Affine3.v
+    (1. -. y sy -. zsz)
+    (y sx -. z sw)
+    (z sx +. y sw)
+    (x trans)
+    (y sx +. z sw)
+    (1. -. x sx -. zsz)
+    (z sy -. x sw)
+    (y trans)
+    (z sx -. y sw)
+    (z sy +. x sw)
+    (1. -. x sx -. y sy)
+    (z trans)
+    0.
+    0.
+    0.
+    1.
 
 let slerp a b =
   let a = normalize a
@@ -121,10 +126,10 @@ let slerp a b =
     | d -> compute a b d
 
 let transform ?about t v =
-  let aux V.{ x; y; z } =
-    let r = { x; y; z; w = 0. } in
+  let aux p =
+    let r = { x = V3.x p; y = V3.y p; z = V3.z p; w = 0. } in
     let { x; y; z; _ } = mul (mul t r) (conj t) in
-    V.{ x; y; z }
+    V3.v x y z
   in
   match about with
   | Some p -> V3.sub v p |> aux |> V3.add p
@@ -143,8 +148,8 @@ let align v1 v2 =
     in
     make axis Float.pi )
   else (
-    let V.{ x; y; z } = V3.(cross v1 v2) in
+    let crx = V3.(cross v1 v2) in
     let w = V3.((norm v1 *. norm v2) +. dot v1 v2) in
-    normalize { x; y; z; w } )
+    normalize { x = V3.x crx; y = V3.y crx; z = V3.z crx; w } )
 
 let to_string { x; y; z; w } = Printf.sprintf "[%f, %f, %f, %f]" x y z w

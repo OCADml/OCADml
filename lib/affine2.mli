@@ -1,22 +1,18 @@
 (** A 2d affine transformation matrix. *)
 
 type row = float * float * float
-
-type t =
-  { r0c0 : float
-  ; r0c1 : float
-  ; r0c2 : float
-  ; r1c0 : float
-  ; r1c1 : float
-  ; r1c2 : float
-  ; r2c0 : float
-  ; r2c1 : float
-  ; r2c2 : float
-  }
+type t = Gg.m3
 
 include Affine.Ops with type t := t (** @inline *)
 
-(** {1 Construction by Rows} *)
+(** {1 Construction} *)
+
+(** [v e00 e01 e02 e10 e11 e12 e20 e21 e22]
+
+    Create a 2d affine matrix from elements in row major order. *)
+val v : float -> float -> float -> float -> float -> float -> float -> float -> float -> t
+
+(** {2 Construction by Rows} *)
 
 (** [of_rows rows]
 
@@ -34,6 +30,18 @@ val of_row_matrix_exn : float array array -> t
 
     Convert the float matrix [m] into a [t] if it is the correct shape (3 x 3). *)
 val of_row_matrix : float array array -> (t, string) result
+
+(** {1 Element Accessors} *)
+
+val e00 : t -> float
+val e01 : t -> float
+val e02 : t -> float
+val e10 : t -> float
+val e11 : t -> float
+val e12 : t -> float
+val e20 : t -> float
+val e21 : t -> float
+val e22 : t -> float
 
 (** {1 Transforms} *)
 

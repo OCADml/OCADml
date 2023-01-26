@@ -1,8 +1,6 @@
 (* Polyhole partitioning algorithm ported from
    https://github.com/RonaldoCMP/Polygon-stuffs/blob/master/polyHolePartition.scad *)
 
-open V
-
 type tag =
   { n : int
   ; idx : int
@@ -30,7 +28,7 @@ module BridgeSet = Set.Make (struct
 end)
 
 (* Opposite of usual convention, but this works. Flip inputs for now. *)
-let is_ccw a b c = V3.get_z V2.(cross (sub b a) (sub c a)) > 0.
+let is_ccw a b c = V3.z V2.(cross (sub b a) (sub c a)) > 0.
 
 (* check if point p is within the CCW triangle described by p1, p2, and p3. *)
 let in_tri p p1 p2 p3 = is_ccw p1 p p2 && is_ccw p2 p p3
@@ -42,26 +40,27 @@ let outer_intersect p outer =
   let seg_idx = ref 0
   and out_x = ref Float.infinity
   and out_y = ref 0. in
-  let update i { x = inter_x; y = inter_y } =
-    if inter_x < !out_x
+  let update i inter =
+    if V2.x inter < !out_x
     then (
       seg_idx := i;
-      out_x := inter_x;
-      out_y := inter_y )
+      out_x := V2.x inter;
+      out_y := V2.y inter )
   in
   for i = 0 to len - 1 do
     let { p = po1; _ } = outer.(i)
     and { p = po2; _ } = outer.((i + 1) mod len) in
     if is_ccw p po1 po2
     then
-      if Float.equal p.y po1.y
-      then update i po1
-      else if Float.equal p.y po2.y
-      then update i po2
-      else if po1.y < p.y && po2.y >= p.y
-      then (
-        let u = (p.y -. po2.y) /. (po1.y -. po2.y) in
-        update i (V2.lerp po1 po2 u) )
+      V2.(
+        if Float.equal (y p) (y po1)
+        then update i po1
+        else if Float.equal (y p) (y po2)
+        then update i po2
+        else if y po1 < y p && y po2 >= y p
+        then (
+          let u = (y p -. y po2) /. (y po1 -. y po2) in
+          update i (V2.lerp po1 po2 u) ))
   done;
   if Float.is_infinite !out_x
   then failwith "Invalid polygon: holes may intersect with eachother, or the outer walls."
@@ -69,37 +68,37 @@ let outer_intersect p outer =
 
 (* Find a bridge between the point p (in the interior of poly outer) and a
    vertex (given by index) in the outer path. *)
-let bridge_to_outer { p = { x; y } as pt; _ } outer =
+let bridge_to_outer { p = pt; _ } outer =
   let seg_idx, intersect = outer_intersect pt outer
   and len = Array.length outer in
   let next_idx = Util.index_wrap ~len (seg_idx + 1) in
   let first, valid_candidate =
-    let { p = { x = seg_x; _ } as seg; _ } = outer.(seg_idx)
-    and { p = { x = next_x; _ } as next; _ } = outer.(next_idx) in
-    if seg_x > x || next_x <= x
-    then seg_idx, fun ({ y = cy; _ } as cp) -> cy < y && in_tri seg pt cp intersect
-    else next_idx, fun ({ y = cy; _ } as cp) -> cy > y && in_tri cp pt next intersect
+    let { p = seg; _ } = outer.(seg_idx)
+    and { p = next; _ } = outer.(next_idx) in
+    if V2.x seg > V2.x pt || V2.x next <= V2.x pt
+    then seg_idx, fun cp -> V2.y cp < V2.y pt && in_tri seg pt cp intersect
+    else next_idx, fun cp -> V2.y cp > V2.y pt && in_tri cp pt next intersect
   in
   let idx = ref first
-  and min_x = ref @@ V2.get_x outer.(first).p in
+  and min_x = ref @@ V2.x outer.(first).p in
   for i = 0 to len - 1 do
-    let { p = { x = cx; _ } as p; _ } = outer.(i) in
+    let { p; _ } = outer.(i) in
     if valid_candidate p
     then
-      if cx < !min_x
+      if V2.x p < !min_x
       then (
-        min_x := cx;
+        min_x := V2.x p;
         idx := i )
   done;
   !idx
 
 let extremes holes =
-  let max_x m ({ p = { x; _ }; _ } as e) = if x > V2.get_x m.p then e else m in
+  let max_x m e = if V2.x e.p > V2.x m.p then e else m in
   let rightmost =
     Array.init (Array.length holes) (fun i ->
         Array.fold_left max_x holes.(i).(0) holes.(i) )
   in
-  Array.sort (fun { p = p1; _ } { p = p2; _ } -> Float.compare p2.x p1.x) rightmost;
+  Array.sort V2.(fun { p = p1; _ } { p = p2; _ } -> Float.compare (x p2) (x p1)) rightmost;
   rightmost
 
 let polyhole_complex ~holes outer =
@@ -143,7 +142,7 @@ let insert_bridge (bridge_start, bridge_end) polys =
     done;
     match !start_idx, !end_idx with
     | Some si, Some ei -> Some (si, ei, idx)
-    | _                -> None
+    | _ -> None
   in
   let start_idx, end_idx, poly_idx = Option.get @@ Util.array_find_mapi f polys in
   let poly = polys.(poly_idx) in
@@ -159,7 +158,7 @@ let insert_bridge (bridge_start, bridge_end) polys =
   and rest = Array.init (n_poly - 1) (fun j -> polys.((poly_idx + 1 + j) mod n_poly)) in
   Array.concat [ [| end_to_start; start_to_end |]; rest ]
 
-let partition ?(rev = false) ?(lift = fun { x; y } -> V3.v x y 0.) ~holes outer =
+let partition ?(rev = false) ?(lift = V3.of_v2 ~z:0.) ~holes outer =
   let outer_sign = Path2.clockwise_sign outer in
   let flipped = Float.equal (-1.) outer_sign in
   let outer = if flipped then List.rev outer else outer in

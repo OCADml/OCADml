@@ -11,7 +11,7 @@ let to_path3 ?(plane = Plane.xy) = List.map (Plane.lift plane)
 let clockwise_sign ?(eps = Util.epsilon) = function
   | [] | [ _ ] | [ _; _ ] -> invalid_arg "Path/polygon must have more than two points."
   | p0 :: p1 :: t ->
-    let f (sum, last) p = sum +. ((last.x -. p.x) *. (last.y +. p.y)), p in
+    let f (sum, last) p = (sum +. V2.((x last -. x p) *. (y last +. y p))), p in
     let sum, _ = List.fold_left f (f (0., p0) p1) t in
     if Math.approx ~eps sum 0. then 0. else Float.(of_int @@ compare sum 0.)
 
@@ -23,20 +23,21 @@ let self_intersections ?eps ?closed path =
 let is_simple ?eps ?closed path = APath2.is_simple ?eps ?closed (Array.of_list path)
 
 let bbox = function
-  | [] -> invalid_arg "Cannot calculate bbox for empty path."
+  | [] -> Gg.Box2.empty
   | hd :: tl ->
-    let f (bb : V2.bbox) p =
-      let min = V2.lower_bounds bb.min p
-      and max = V2.upper_bounds bb.max p in
-      V2.{ min; max }
+    let f (min, max) p =
+      let min = V2.lower_bounds min p
+      and max = V2.upper_bounds max p in
+      min, max
     in
-    List.fold_left f { min = hd; max = hd } tl
+    let min, max = List.fold_left f (hd, hd) tl in
+    Gg.Box2.v min max
 
 let centroid ?(eps = Util.epsilon) = function
   | [] | [ _ ] | [ _; _ ] -> invalid_arg "Polygon must have more than two points."
   | p0 :: p1 :: tl ->
     let f (area_sum, p_sum, p1) p2 =
-      let { z = area; _ } = V2.(cross (sub p2 p0) (sub p1 p0)) in
+      let area = V3.z V2.(cross (sub p2 p0) (sub p1 p0)) in
       area +. area_sum, V2.(add p_sum (smul (p0 +@ p1 +@ p2) area)), p2
     in
     let area_sum, p_sum, _ = List.fold_left f (0., V2.zero, p1) tl in
@@ -47,16 +48,12 @@ let centroid ?(eps = Util.epsilon) = function
 let area ?(signed = false) = function
   | [] | [ _ ] | [ _; _ ] -> 0.
   | p0 :: p1 :: tl ->
-    let f (area, p1) p2 = (area +. V2.(V3.get_z (cross (sub p1 p0) (sub p2 p0)))), p2 in
+    let f (area, p1) p2 = (area +. V2.(V3.z (cross (sub p1 p0) (sub p2 p0)))), p2 in
     let area, _ = List.fold_left f (0., p1) tl in
     (if signed then area else Float.abs area) /. 2.
 
 let point_inside ?(eps = Util.epsilon) ?(nonzero = false) t p =
-  let bb = bbox t in
-  if p.x < bb.min.x -. eps
-     || p.x > bb.max.x +. eps
-     || p.y < bb.min.y -. eps
-     || p.y > bb.max.y +. eps
+  if Gg.Box2.mem p (bbox t)
   then `Outside
   else (
     let segs = segment ~closed:true t in
@@ -80,10 +77,10 @@ let point_inside ?(eps = Util.epsilon) ?(nonzero = false) t p =
         let w =
           if V2.distance p0 p1 > eps
           then (
-            let c = (V2.cross p0 (V2.sub p1 p0)).z in
-            if p0.y <= 0.
-            then if p1.y > 0. && c > 0. then 1 else 0
-            else if p1.y <= 0. && c < 0.
+            let c = V3.z (V2.cross p0 (V2.sub p1 p0)) in
+            if V2.y p0 <= 0.
+            then if V2.y p1 > 0. && c > 0. then 1 else 0
+            else if V2.y p1 <= 0. && c < 0.
             then -1
             else 0 )
           else 0
@@ -95,8 +92,9 @@ let point_inside ?(eps = Util.epsilon) ?(nonzero = false) t p =
       let f crossings (s : V2.line) =
         let p0 = V2.sub s.a p
         and p1 = V2.sub s.b p in
-        if ((p1.y > eps && p0.y <= eps) || (p1.y <= eps && p0.y > eps))
-           && -.eps < p0.x -. (p0.y *. (p1.x -. p0.x) /. (p1.y -. p0.y))
+        if V2.(
+             ((y p1 > eps && y p0 <= eps) || (y p1 <= eps && y p0 > eps))
+             && -.eps < x p0 -. (y p0 *. (x p1 -. x p0) /. (y p1 -. y p0)))
         then crossings + 1
         else crossings
       in
@@ -122,11 +120,8 @@ let xscale x = List.map (V2.xscale x)
 let yscale y = List.map (V2.yscale y)
 let mirror ax = List.map (V2.mirror ax)
 let affine a = List.map (Affine2.transform a)
-let affine3 m = List.map (fun { x; y } -> Affine3.transform m (v3 x y 0.))
-
-let quaternion ?about q =
-  List.map (fun { x; y } -> Quaternion.transform ?about q (v3 x y 0.))
-
+let affine3 m = List.map (fun v -> Affine3.transform m (V3.of_v2 v))
+let quaternion ?about q = List.map (fun v -> Quaternion.transform ?about q (V3.of_v2 v))
 let axis_rotate ?about ax r = quaternion ?about (Quaternion.make ax r)
 
 let circle ?fn ?fa ?fs r =
@@ -138,15 +133,17 @@ let circle ?fn ?fa ?fs r =
   in
   List.init fn f
 
-let square ?(center = false) { x; y } =
+let square ?(center = false) dims =
   if center
   then (
-    let x = x /. 2.
-    and y = y /. 2. in
-    V2.[ v x (-.y); v (-.x) (-.y); v (-.x) y; v x y ] )
-  else V2.[ v 0. y; v x y; v x 0.; v 0. 0. ]
+    let w = V2.x dims /. 2.
+    and h = V2.y dims /. 2. in
+    V2.[ v w (-.h); v (-.w) (-.h); v (-.w) h; v w h ] )
+  else V2.[ v 0. (y dims); v (x dims) (y dims); v (x dims) 0.; v 0. 0. ]
 
-let ellipse ?fn ?fa ?fs { x; y } =
+let ellipse ?fn ?fa ?fs radii =
+  let x = V2.x radii
+  and y = V2.y radii in
   let fn = Util.helical_fragments ?fn ?fa ?fs (Float.max x y) in
   let step = -2. *. Float.pi /. Float.of_int fn in
   let f i =
@@ -179,7 +176,7 @@ let hull ?(all = false) ps =
   let len = Array.length ps in
   Array.fast_sort V2.compare ps;
   let is_cw =
-    let lhs a b c = V2.(cross (a -@ c) (b -@ c)).z
+    let lhs a b c = V3.z V2.(cross (a -@ c) (b -@ c))
     and rhs a b c = V2.(Util.epsilon *. distance a c *. distance b c) in
     if all
     then fun a b c -> lhs a b c <= rhs a b c

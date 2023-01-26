@@ -69,7 +69,7 @@ let rref m =
    https://github.com/Simsso/Online-Tools/blob/master/src/page/logic/cubic-spline-interpolation.js *)
 let fit ?(boundary = `Natural) ps =
   let ps =
-    let f (p1 : V2.t) (p2 : V2.t) = Float.compare p1.x p2.x in
+    let f (p1 : V2.t) (p2 : V2.t) = V2.(Float.compare (x p1) (x p2)) in
     Array.of_list @@ List.sort_uniq f ps
   and row = ref 0 in
   let len = Array.length ps in
@@ -79,27 +79,27 @@ let fit ?(boundary = `Natural) ps =
   for n = 0 to len - 2 do
     let r = m.(!row)
     and n4 = n * 4
-    and { x = x0; y = y0 } = ps.(n)
-    and { x = x1; y = y1 } = ps.(n + 1) in
+    and p0 = ps.(n)
+    and p1 = ps.(n + 1) in
     let () =
-      r.(n4) <- Float.pow x0 3.;
-      r.(n4 + 1) <- Float.pow x0 2.;
-      r.(n4 + 2) <- x0;
+      r.(n4) <- Float.pow (V2.x p0) 3.;
+      r.(n4 + 1) <- Float.pow (V2.x p0) 2.;
+      r.(n4 + 2) <- V2.x p0;
       r.(n4 + 3) <- 1.;
-      r.(solution_idx) <- y0;
+      r.(solution_idx) <- V2.y p0;
       incr row
     in
     let r = m.(!row) in
-    r.(n4) <- Float.pow x1 3.;
-    r.(n4 + 1) <- Float.pow x1 2.;
-    r.(n4 + 2) <- x1;
+    r.(n4) <- Float.pow (V2.x p1) 3.;
+    r.(n4 + 1) <- Float.pow (V2.x p1) 2.;
+    r.(n4 + 2) <- V2.x p1;
     r.(n4 + 3) <- 1.;
-    r.(solution_idx) <- y1;
+    r.(solution_idx) <- V2.y p1;
     incr row
   done;
   (* first derivative *)
   for n = 0 to len - 3 do
-    let { x = x1; _ } = ps.(n + 1)
+    let x1 = V2.x ps.(n + 1)
     and r = m.(!row)
     and n4 = n * 4 in
     r.(n4) <- 3. *. Float.pow x1 2.;
@@ -112,7 +112,7 @@ let fit ?(boundary = `Natural) ps =
   done;
   (* second derivative *)
   for n = 0 to len - 3 do
-    let { x = x1; _ } = ps.(n + 1)
+    let x1 = V2.x ps.(n + 1)
     and r = m.(!row)
     and n4 = n * 4 in
     r.(n4) <- 6. *. x1;
@@ -129,7 +129,7 @@ let fit ?(boundary = `Natural) ps =
       m.(!row).(0) <- 1.;
       incr row;
       m.(!row).(solution_idx - 4) <- 1.
-    | `NotAKnot  ->
+    | `NotAKnot ->
       let r = m.(!row) in
       let () =
         r.(0) <- 1.;
@@ -139,11 +139,11 @@ let fit ?(boundary = `Natural) ps =
       let r = m.(!row) in
       r.(solution_idx - 8) <- 1.;
       r.(solution_idx - 4) <- -1.
-    | `Periodic  ->
+    | `Periodic ->
       (* first derivative of first and last point equal *)
       let r = m.(!row)
-      and { x = x0; _ } = ps.(0)
-      and { x = xn; _ } = ps.(len - 1) in
+      and x0 = V2.x ps.(0)
+      and xn = V2.x ps.(len - 1) in
       let () =
         r.(0) <- 3. *. Float.pow x0 2.;
         r.(1) <- 2. *. x0;
@@ -159,10 +159,10 @@ let fit ?(boundary = `Natural) ps =
       r.(1) <- 2.;
       r.(solution_idx - 4) <- -6. *. xn;
       r.(solution_idx - 3) <- -2.
-    | `Natural   ->
+    | `Natural ->
       let r = m.(!row)
-      and { x = x0; _ } = ps.(0)
-      and { x = xn; _ } = ps.(len - 1) in
+      and x0 = V2.x ps.(0)
+      and xn = V2.x ps.(len - 1) in
       let () =
         r.(0) <- 6. *. x0;
         r.(1) <- 2.;
@@ -178,8 +178,8 @@ let fit ?(boundary = `Natural) ps =
   rref m;
   for i = 0 to len - 2 do
     let idx = i * 4 in
-    xmins.(i) <- ps.(i).x;
-    xmaxs.(i) <- ps.(i + 1).x;
+    xmins.(i) <- V2.x ps.(i);
+    xmaxs.(i) <- V2.x ps.(i + 1);
     coefs.(i)
       <- { a = m.(idx).(solution_idx)
          ; b = m.(idx + 1).(solution_idx)
@@ -213,6 +213,6 @@ let interpolate_path ~fn t =
     let x = xmin +. (Float.of_int i *. step) in
     match extrapolate t x with
     | Some y -> v2 x y :: pts
-    | None   -> pts
+    | None -> pts
   in
   List.rev @@ Util.fold_init (fn + 1) f []

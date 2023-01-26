@@ -1,52 +1,51 @@
-type t = V.v2 =
-  { x : float
-  ; y : float
-  }
+type t = V.v2
 
 type line =
   { a : t
   ; b : t
   }
 
-type bbox =
-  { min : t
-  ; max : t
-  }
-
-let zero = { x = 0.; y = 0. }
-let[@inline] v x y = { x; y }
-let of_tup (x, y) = { x; y }
-let to_tup { x; y } = x, y
-let[@inline] horizontal_op op a b = v (op a.x b.x) (op a.y b.y)
-let[@inline] add a b = v (a.x +. b.x) (a.y +. b.y)
-let[@inline] sub a b = v (a.x -. b.x) (a.y -. b.y)
-let[@inline] mul a b = v (a.x *. b.x) (a.y *. b.y)
-let[@inline] div a b = v (a.x /. b.x) (a.y /. b.y)
-let[@inline] neg t = v (t.x *. -1.) (t.y *. -1.)
-let[@inline] sadd t s = v (t.x +. s) (t.y +. s)
-let[@inline] ssub t s = v (t.x -. s) (t.y -. s)
-let[@inline] smul t s = v (t.x *. s) (t.y *. s)
-let[@inline] sdiv t s = v (t.x /. s) (t.y /. s)
-let map f { x; y } = v (f x) (f y)
-let equal a b = Float.equal a.x b.x && Float.equal a.y b.y
+let[@inline] v x y = Gg.V2.v x y
+let zero = v 0. 0.
+let[@inline] x t = Gg.V2.x t
+let[@inline] y t = Gg.V2.y t
+let[@inline] z _ = 0.
+let[@inline] of_tup (x, y) = v x y
+let[@inline] to_tup t = x t, y t
+let[@inline] horizontal_op op a b = v (op (x a) (x b)) (op (y a) (y b))
+let[@inline] add a b = Gg.V2.add a b
+let[@inline] sub a b = Gg.V2.sub a b
+let[@inline] mul a b = Gg.V2.mul a b
+let[@inline] div a b = Gg.V2.div a b
+let[@inline] neg t = Gg.V2.neg t
+let[@inline] sadd t s = v (x t +. s) (y t +. s)
+let[@inline] ssub t s = v (x t -. s) (y t -. s)
+let[@inline] smul t s = Gg.V2.smul s t
+let[@inline] sdiv t s = v (x t /. s) (y t /. s)
+let[@inline] map f t = Gg.V2.map f t
+let[@inline] equal a b = Float.equal (x a) (x b) && Float.equal (y a) (y b)
 
 let compare a b =
-  let x = Float.compare a.x b.x in
-  if x = 0 then Float.compare a.y b.y else x
+  let x = Float.compare (x a) (x b) in
+  if x = 0 then Float.compare (y a) (y b) else x
 
-let norm { x; y } = Float.sqrt ((x *. x) +. (y *. y))
+let norm t =
+  let x = x t
+  and y = y t in
+  Float.sqrt ((x *. x) +. (y *. y))
+
 let distance a b = norm (sub a b)
 let approx ?(eps = Util.epsilon) a b = Float.(compare (distance a b) eps) < 1
-let abs t = v (Float.abs t.x) (Float.abs t.y)
+let abs t = v (Float.abs (x t)) (Float.abs (y t))
 
 let normalize t =
   let n = norm t in
   if n > 0. then sdiv t n else t
 
-let ortho { x; y } = v (-.y) x
-let dot a b = (a.x *. b.x) +. (a.y *. b.y)
-let cross a b = V.v3 0. 0. ((a.x *. b.y) -. (a.y *. b.x))
-let mid a b = v ((a.x +. b.x) /. 2.) ((a.y +. b.y) /. 2.)
+let ortho t = v (-.y t) (x t)
+let dot a b = Gg.V2.dot a b
+let cross a b = V.v3 0. 0. ((x a *. y b) -. (y a *. x b))
+let mid a b = v ((x a +. x b) /. 2.) ((y a +. y b) /. 2.)
 
 let mean l =
   let n, sum = List.fold_left (fun (i, s) t -> i + 1, add t s) (0, zero) l in
@@ -70,25 +69,17 @@ let lerpn ?(endpoint = true) a b n =
       lerp a b u )
 
 let angle a b = Float.acos (Math.clamp ~min:(-1.) ~max:1. (dot a b /. (norm a *. norm b)))
-let ccw_theta { x; y } = Float.atan2 y x
+let ccw_theta t = Float.atan2 (y t) (x t)
 let vector_axis a b = cross a b
 let angle_points a b c = angle (sub a b) (sub c b)
-let lower_bounds a b = v (Float.min a.x b.x) (Float.min a.y b.y)
-let upper_bounds a b = v (Float.max a.x b.x) (Float.max a.y b.y)
-let bbox a b = { min = lower_bounds a b; max = upper_bounds a b }
-let bbox_centroid bb = mid bb.min bb.max
-let bbox_area bb = (bb.max.x -. bb.min.x) *. (bb.max.y -. bb.min.y)
-
-let bbox_intersect a b =
-  let min = { x = Float.max a.min.x b.min.x; y = Float.max a.min.y b.min.y }
-  and max = { x = Float.min a.max.x b.max.x; y = Float.min a.max.y b.max.y } in
-  if max.x < min.x || max.y < min.y then None else Some { min; max }
+let lower_bounds a b = v (Float.min (x a) (x b)) (Float.min (y a) (y b))
+let upper_bounds a b = v (Float.max (x a) (x b)) (Float.max (y a) (y b))
 
 let clockwise_sign ?(eps = Util.epsilon) a b c =
   let ba = sub b a
   and cb = sub c b in
-  let V.{ z; _ } = cross ba cb in
-  if Float.abs z <= eps *. norm ba *. norm cb then 0. else Math.sign z
+  let crx_z = Gg.V3.z @@ cross ba cb in
+  if Float.abs crx_z <= eps *. norm ba *. norm cb then 0. else Math.sign crx_z
 
 let collinear p1 p2 p3 =
   let a = distance p1 p2
@@ -140,16 +131,16 @@ let line_intersection
   =
   let d1 = sub l1.a l1.b
   and d2 = sub l2.a l2.b in
-  let V.{ z = denominator; _ } = cross d1 d2 in
+  let denominator = Gg.V3.z @@ cross d1 d2 in
   if Math.approx ~eps denominator 0.
   then None
   else (
     let v = sub l1.a l2.a in
     let a_frac =
-      let V.{ z = num; _ } = cross v d2 in
+      let num = Gg.V3.z @@ cross v d2 in
       num /. denominator
     and b_frac =
-      let V.{ z = num; _ } = cross v d1 in
+      let num = Gg.V3.z @@ cross v d1 in
       num /. denominator
     in
     let good =
@@ -162,12 +153,9 @@ let line_intersection
     in
     if good then Some (add l1.a (smul (sub l1.b l1.a) a_frac)) else None )
 
-let line_normal a b = normalize (v (a.y -. b.y) (b.x -. a.x))
-let get_x { x; _ } = x
-let get_y { y; _ } = y
-let get_z _ = 0.
+let line_normal a b = normalize (v (y a -. y b) (x b -. x a))
 let to_v2 t = t
-let to_string { x; y } = Printf.sprintf "[%f, %f]" x y
+let to_string t = Printf.sprintf "[%f, %f]" (x t) (y t)
 let deg_of_rad t = map Math.deg_of_rad t
 let rad_of_deg t = map Math.rad_of_deg t
 let[@inline] ( +@ ) a b = add a b
@@ -178,19 +166,21 @@ let[@inline] ( +$ ) a b = sadd a b
 let[@inline] ( -$ ) a b = ssub a b
 let[@inline] ( *$ ) a b = smul a b
 let[@inline] ( /$ ) a b = sdiv a b
-let of_v3 V.{ x; y; z = _ } = { x; y }
-let to_v3 ?(z = 0.) { x; y } = V.v3 x y z
+let[@inline] of_v3 p = v (Gg.V3.x p) (Gg.V3.y p)
+let[@inline] to_v3 ?(z = 0.) t = V.v3 (x t) (y t) z
 let[@inline] translate a b = add a b
-let[@inline] xtrans d { x; y } = v (x +. d) y
-let[@inline] ytrans d { x; y } = v x (y +. d)
+let[@inline] xtrans d t = v (x t +. d) (y t)
+let[@inline] ytrans d t = v (x t) (y t +. d)
 
 let rotate ?about theta t =
   let s = Float.sin theta
   and c = Float.cos theta in
-  let rot { x; y } =
-    let x = (x *. c) -. (y *. s)
-    and y = (y *. c) +. (x *. s) in
-    { x; y }
+  let rot r =
+    let rx = x r
+    and ry = y r in
+    let x = (rx *. c) -. (ry *. s)
+    and y = (ry *. c) +. (rx *. s) in
+    v x y
   in
   match about with
   | Some p -> sub t p |> rot |> add p
@@ -198,6 +188,6 @@ let rotate ?about theta t =
 
 let[@inline] zrot ?about theta t = rotate ?about theta t
 let[@inline] scale a b = mul a b
-let[@inline] xscale s { x; y } = v (x *. s) y
-let[@inline] yscale s { x; y } = v x (y *. s)
+let[@inline] xscale s t = v (x t *. s) (y t)
+let[@inline] yscale s t = v (x t) (y t *. s)
 let mirror ax t = sub t (smul ax (2. *. (dot t ax /. dot ax ax)))

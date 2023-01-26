@@ -1,5 +1,3 @@
-open! V
-
 type t =
   { outer : V3.t list
   ; holes : V3.t list list
@@ -21,6 +19,10 @@ let make ?(validate = true) ?(holes = []) outer =
           coplanar outer && List.for_all coplanar holes
   then of_poly2 ~plane @@ to_poly2 ~validate:true ~plane { outer; holes }
   else invalid_arg "Polygon contains non-coplanar points."
+
+let of_paths ?validate = function
+  | [ outer ] | ([] as outer) -> make ?validate outer
+  | outer :: holes -> make ?validate ~holes outer
 
 let add_holes ?validate ~holes t =
   make ?validate ~holes:(List.rev_append t.holes holes) t.outer

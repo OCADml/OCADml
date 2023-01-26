@@ -13,12 +13,12 @@ let path_to_outlines ?(fn = 5) data =
       let path =
         match ps with
         | [] -> [ last_p ]
-        | _  -> if V2.approx (Util.last_element ps) last_p then ps else last_p :: ps
+        | _ -> if V2.approx (Util.last_element ps) last_p then ps else last_p :: ps
       in
       path :: paths, [], last_p
   in
   let paths, _, _ = Path.fold data f ([], [], v2 0. 0.) in
-  List.rev_map (List.map @@ fun V.{ x; y } -> v2 x (-.y)) paths
+  List.rev_map (List.map @@ fun v -> v2 (V2.x v) (-.V2.y v)) paths
 
 let text ?fn ?(center = false) ?slant ?weight ?(size = 10.) ~font txt =
   let ctxt = create (Image.create Image.A1 ~w:1 ~h:1) in
@@ -38,15 +38,15 @@ let text ?fn ?(center = false) ?slant ?weight ?(size = 10.) ~font txt =
     Path.text ctxt s;
     let acc =
       match path_to_outlines ?fn (Path.copy ctxt) with
-      | []          -> acc
+      | [] -> acc
       | outer :: tl ->
         let rec aux polys outer holes = function
-          | []                    -> Poly2.make ~holes (List.rev outer) :: polys
+          | [] -> Poly2.make ~holes (List.rev outer) :: polys
           | (pt :: _ as hd) :: tl ->
             ( match Path2.point_inside outer pt with
             | `Inside -> aux polys outer (hd :: holes) tl
-            | _       -> aux (Poly2.make ~holes (List.rev outer) :: polys) hd [] tl )
-          | _                     -> aux polys outer holes tl
+            | _ -> aux (Poly2.make ~holes (List.rev outer) :: polys) hd [] tl )
+          | _ -> aux polys outer holes tl
         in
         aux acc outer [] tl
     in

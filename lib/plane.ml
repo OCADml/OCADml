@@ -1,20 +1,26 @@
 open V
 
-type t = V.v4
+type t =
+  { x : float
+  ; y : float
+  ; z : float
+  ; w : float
+  }
 
 let to_tup { x; y; z; w } = x, y, z, w
-let of_tup (x, y, z, w) = { x; y; z; w }
-let to_v4 t = t
-let of_v4 v = v
+let to_v4 t = Gg.V4.v t.x t.y t.z t.w
 
 let make p1 p2 p3 =
-  let ({ x; y; z } as crx) = V3.(cross (sub p3 p1) (sub p2 p1)) in
+  let crx = V3.(cross (sub p3 p1) (sub p2 p1)) in
   let n = V3.norm crx in
   if Math.approx 0. n then invalid_arg "Plane points must not be collinear";
-  { x = x /. n; y = y /. n; z = z /. n; w = V3.dot crx p1 /. n }
+  { x = V3.x crx /. n; y = V3.y crx /. n; z = V3.z crx /. n; w = V3.dot crx p1 /. n }
 
-let of_normal ?(point = V3.zero) ({ x; y; z } as normal) =
-  let n = V3.norm normal in
+let of_normal ?(point = V3.zero) normal =
+  let n = V3.norm normal
+  and x = V3.x normal
+  and y = V3.y normal
+  and z = V3.z normal in
   if Math.approx 0. n then invalid_arg "Normal cannot be zero.";
   { x = x /. n; y = y /. n; z = z /. n; w = V3.dot normal point /. n }
 
@@ -82,9 +88,9 @@ let line_angle t V3.{ a; b } =
   Float.atan2 sin_angle cos_angle
 
 let line_intersection ?(eps = Util.epsilon) ?(bounds = false, false) (t : t) l =
-  let ({ x = dx; y = dy; z = dz } as diff) = V3.sub l.V3.b l.a in
-  let a = (t.x *. l.a.x) +. (t.y *. l.a.y) +. (t.z *. l.a.z) +. (t.w *. -1.)
-  and b = (t.x *. dx) +. (t.y *. dy) +. (t.z *. dz) +. (t.w *. 0.) in
+  let d = V3.sub l.V3.b l.a in
+  let a = V3.((t.x *. x l.a) +. (t.y *. y l.a) +. (t.z *. z l.a) +. (t.w *. -1.))
+  and b = V3.((t.x *. x d) +. (t.y *. y d) +. (t.z *. z d) +. (t.w *. 0.)) in
   match Math.approx ~eps b 0., Math.approx ~eps a 0. with
   | true, true -> `OnPlane l
   | true, false -> `Parallel
@@ -94,6 +100,6 @@ let line_intersection ?(eps = Util.epsilon) ?(bounds = false, false) (t : t) l =
       let bn_a, bn_b = bounds in
       ((not bn_a) || frac >= 0. -. eps) && ((not bn_b) || frac <= 1. +. eps)
     in
-    if good then `Point V3.(l.a +@ (diff *$ frac), frac) else `OutOfBounds
+    if good then `Point V3.(l.a +@ (d *$ frac), frac) else `OutOfBounds
 
 let to_string { x; y; z; w } = Printf.sprintf "[%f, %f, %f, %f]" x y z w

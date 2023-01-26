@@ -1,7 +1,4 @@
-type t = V.v2 =
-  { x : float
-  ; y : float
-  }
+type t = V.v2
 
 (** [v x y]
 

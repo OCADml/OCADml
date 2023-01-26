@@ -145,7 +145,7 @@ let of_rows
               V3.(cross (sub ps.(i2) ps.(i1)) (sub ps.(i3) ps.(i1)))
               |> if rev then V3.neg else Fun.id
             in
-            if Math.approx n.z 0.
+            if Math.approx (V3.z n) 0.
             then add_face i1 i4 i3 acc
             else add_faces (side V3.(dot n ps.(i4) > dot n ps.(i1))) acc i1 i2 i3 i4
         | `Default ->
@@ -575,10 +575,10 @@ let to_binstl ~rev path t =
     Out_channel.output_byte oc ((n lsr 24) land 0xFF)
   in
   let write_float oc n = write_unsigned_long oc Int32.(to_int @@ bits_of_float n) in
-  let write_v3 oc V3.{ x; y; z } =
-    write_float oc x;
-    write_float oc y;
-    write_float oc z
+  let write_v3 oc p =
+    write_float oc @@ V3.x p;
+    write_float oc @@ V3.y p;
+    write_float oc @@ V3.z p
   in
   let f oc =
     (* header *)
@@ -614,12 +614,12 @@ let to_stl ~rev path t =
     let a = Array.make t.size (List.hd t.points) in
     List.iteri (fun i p -> a.(i) <- p) t.points;
     a
-  and write_v3 oc V3.{ x; y; z } =
-    Out_channel.output_string oc (Float.to_string x);
+  and write_v3 oc p =
+    Out_channel.output_string oc (Float.to_string @@ V3.x p);
     Out_channel.output_char oc ' ';
-    Out_channel.output_string oc (Float.to_string y);
+    Out_channel.output_string oc (Float.to_string @@ V3.y p);
     Out_channel.output_char oc ' ';
-    Out_channel.output_string oc (Float.to_string z)
+    Out_channel.output_string oc (Float.to_string @@ V3.z p)
   in
   let write_vertex oc v =
     Out_channel.output_string oc "\n      vertex ";

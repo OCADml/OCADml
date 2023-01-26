@@ -12,12 +12,13 @@ let to_path2 ?(plane = Plane.xy) = List.map (Plane.project plane)
 let bbox = function
   | [] -> invalid_arg "Cannot calculate bbox for empty path."
   | hd :: tl ->
-    let f (bb : V3.bbox) p =
-      let min = V3.lower_bounds bb.min p
-      and max = V3.upper_bounds bb.max p in
-      V3.{ min; max }
+    let f (min, max) p =
+      let min = V3.lower_bounds min p
+      and max = V3.upper_bounds max p in
+      min, max
     in
-    List.fold_left f V3.{ min = hd; max = hd } tl
+    let min, max = List.fold_left f (hd, hd) tl in
+    Gg.Box3.v min max
 
 let circle ?fn ?fa ?fs ?(plane = Plane.xy) r =
   Path2.lift plane (Path2.circle ?fn ?fa ?fs r)
@@ -85,14 +86,16 @@ let to_transforms ?(mode = `Auto) ?scale_ez ?twist_ez ?scale ?twist path =
     | `Euler ->
       let m = Quaternion.(to_affine @@ of_euler Float.(v3 (pi /. 2.) 0. (pi /. 2.))) in
       fun i ->
-        let { x = dx; y = dy; z = dz } =
+        let d =
           if i = 0
           then V3.(p.(1) -@ p.(0))
           else if i = len - 1
           then V3.(p.(i) -@ p.(i - 1))
           else V3.(p.(i + 1) -@ p.(i - 1))
         in
-        let ay = Float.atan2 dz (Float.sqrt ((dx *. dx) +. (dy *. dy)))
+        let dx = V3.x d
+        and dy = V3.y d in
+        let ay = Float.atan2 (V3.z d) (Float.sqrt ((dx *. dx) +. (dy *. dy)))
         and az = Float.atan2 dy dx in
         let q = Quaternion.of_euler (v3 0. (-.ay) az) in
         Affine3.(m %> Quaternion.(to_affine ~trans:p.(i) q))

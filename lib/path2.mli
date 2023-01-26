@@ -227,7 +227,7 @@ val is_simple : ?eps:float -> ?closed:bool -> t -> bool
 (** [bbox t]
 
     Compute the 2d bounding box of the path [t]. *)
-val bbox : t -> V2.bbox
+val bbox : t -> Gg.Box2.t
 
 (** [centroid ?eps t]
 

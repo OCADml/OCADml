@@ -123,9 +123,11 @@ module Cap = struct
       | `Joint j -> j
       | `Cut c -> 16. *. c /. Float.sqrt 2. /. (1. +. (4. *. curv))
     in
-    let f (acc, last_z) { x = d; y = z } =
-      let z = quantize z in
-      if Math.approx last_z z then acc, last_z else { d = quantize d; z } :: acc, z
+    let f (acc, last_z) off =
+      let z = quantize (V2.y off) in
+      if Math.approx last_z z
+      then acc, last_z
+      else { d = quantize (V2.x off); z } :: acc, z
     in
     Offsets
       ( R2.bez_corner
@@ -418,8 +420,7 @@ let sweep'
       let _, mid, last_transform =
         let f (i, acc, _last) m =
           ( i + 1
-          , List.map (fun { x; y } -> Affine3.transform m { x; y; z = 0. }) (get_shape i)
-            :: acc
+          , List.map (fun p -> Affine3.transform m (V3.of_v2 p)) (get_shape i) :: acc
           , m )
         in
         List.fold_left f (f (0, [], hd) hd) tl
@@ -849,13 +850,14 @@ let revolve
     shape
   =
   let bb = Poly2.bbox shape in
-  if bb.min.x < 0.
+  if Gg.Box2.minx bb < 0.
   then invalid_arg "Input shape must exist entirely in the X+ half-plane.";
-  let h = bb.max.y -. bb.min.y
-  and steps = Util.helical_fragments ?fn ?fa ?fs bb.max.x in
+  let h = Gg.Box2.maxy bb -. Gg.Box2.miny bb
+  and steps = Util.helical_fragments ?fn ?fa ?fs (Gg.Box2.maxx bb) in
   let sk =
-    let { x; y } = skew in
-    Affine3.(mul (ztrans (-.bb.min.y)) (skew ~xz:(x /. h) ~yz:(y /. h) ()))
+    let x = V2.x skew
+    and y = V2.y skew in
+    Affine3.(mul (ztrans (-.Gg.Box2.miny bb)) (skew ~xz:(x /. h) ~yz:(y /. h) ()))
   in
   let transforms =
     let f =

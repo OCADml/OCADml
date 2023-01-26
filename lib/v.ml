@@ -1,30 +1,18 @@
-(** Four-dimensional vector
-    @canonical OCADml.v4 *)
-type v4 =
-  { x : float
-  ; y : float
-  ; z : float
-  ; w : float
-  }
+(** Two-dimensional vector
+    @canonical OCADml.v2 *)
+type v2 = Gg.v2
 
 (** Three-dimensional vector
     @canonical OCADml.v3 *)
-type v3 =
-  { x : float
-  ; y : float
-  ; z : float
-  }
+type v3 = Gg.v3
 
-(** Two-dimensional vector
-    @canonical OCADml.v2 *)
-type v2 =
-  { x : float
-  ; y : float
-  }
+(** Four-dimensional vector
+    @canonical OCADml.v4 *)
+type v4 = Gg.v4
 
-let[@inline] v2 x y = { x; y }
-let[@inline] v3 x y z = { x; y; z }
-let[@inline] v4 x y z w = { x; y; z; w }
+let[@inline] v2 x y = Gg.V2.v x y
+let[@inline] v3 x y z = Gg.V3.v x y z
+let[@inline] v4 x y z w = Gg.V4.v x y z w
 
 module type S = sig
   type t
@@ -36,12 +24,6 @@ module type S = sig
   type line =
     { a : t
     ; b : t
-    }
-
-  (** Bounding box. *)
-  type bbox =
-    { min : t
-    ; max : t
     }
 
   (** {1 Comparison} *)
@@ -250,32 +232,12 @@ module type S = sig
        Compute the upper bounds (maxima of each dimension) of the vectors [a] and [b]. *)
   val upper_bounds : t -> t -> t
 
-  (** [bbox a b]
-
-       Compute the bounding box that contains the vectors [a] and [b]. *)
-  val bbox : t -> t -> bbox
-
-  (** [bbox_intersect a b]
-
-      Compute the intersect of the bounding boxes [a] and [b]. *)
-  val bbox_intersect : bbox -> bbox -> bbox option
-
-  (** [bbox_area bb]
-
-      Compute the area of the bounding box [bb]. *)
-  val bbox_area : bbox -> float
-
-  (** [bbox_centroid bb]
-
-      Compute the centroid of the bounding box [bb]. *)
-  val bbox_centroid : bbox -> t
-
   (** {1 Utilities} *)
 
   val map : (float -> float) -> t -> t
-  val get_x : t -> float
-  val get_y : t -> float
-  val get_z : t -> float
+  val x : t -> float
+  val y : t -> float
+  val z : t -> float
   val to_v2 : t -> v2
   val to_string : t -> string
 

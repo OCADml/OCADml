@@ -6,19 +6,19 @@ let step = 1. /. Float.of_int (n_samples - 1)
 
 let newton_raphson ~bez ~drv target_x guess_u =
   let rec aux attempts guess =
-    let slope = (drv guess).x in
-    let guess = guess -. (((bez guess).x -. target_x) /. slope) in
+    let slope = V2.x (drv guess) in
+    let guess = guess -. ((V2.x (bez guess) -. target_x) /. slope) in
     if Math.approx slope 0. || attempts = 3 then guess else aux (attempts + 1) guess
   in
   aux 0 guess_u
 
 let make p1 p2 =
-  if p1.x < 0. || p1.x > 1. || p2.x < 0. || p2.x > 1.
+  if V2.(x p1 < 0. || x p1 > 1. || x p2 < 0. || x p2 > 1.)
   then invalid_arg "Handle point x values must fall between 0 and 1.";
   let ps = [ v2 0. 0.; p1; p2; v2 1. 1. ] in
   let bez = Bez.make ps
   and drv = Bez.deriv ps in
-  let samples = Array.init n_samples (fun i -> (bez (Float.of_int i *. step)).x) in
+  let samples = Array.init n_samples (fun i -> V2.x (bez (Float.of_int i *. step))) in
   let u_of_x x =
     let idx, start =
       let i = ref 1
@@ -37,7 +37,7 @@ let make p1 p2 =
       let dist = (x -. samples.(idx)) /. (samples.(idx + 1) -. samples.(idx)) in
       start +. (dist *. step)
     in
-    let initial_slope = (drv guess_u).x in
+    let initial_slope = V2.x (drv guess_u) in
     if initial_slope >= 0.001
     then newton_raphson ~bez ~drv x guess_u
     else if initial_slope = 0.
@@ -48,14 +48,14 @@ let make p1 p2 =
         ~tolerance:1e-7
         ~lower:start
         ~upper:(start +. step)
-        (fun u -> (bez u).x -. x)
+        (fun u -> V2.x (bez u) -. x)
   in
   fun x ->
     if x <= 0. || Math.approx 0. x
     then 0.
     else if x >= 1. || Math.approx 1. x
     then 1.
-    else (bez (u_of_x x)).y
+    else V2.y (bez (u_of_x x))
 
 type handles = v2 * v2
 

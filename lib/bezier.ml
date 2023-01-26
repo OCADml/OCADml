@@ -8,10 +8,12 @@ module Tbl = Hashtbl.Make (struct
 end)
 
 let signed_pascals_triangle =
-  let tbl = Tbl.create 10 in
+  let tbl = Tbl.create 10
+  and mtx = Mutex.create () in
   Tbl.add tbl 0 (Array.make 1 (-1.));
   fun n ->
     let len = Tbl.length tbl in
+    Mutex.lock mtx;
     if n > len - 1
     then
       for i = len - 1 to n do
@@ -25,26 +27,33 @@ let signed_pascals_triangle =
         Tbl.add tbl (i + 1) row
       done
     else ();
+    Mutex.unlock mtx;
     tbl
 
 let bezier_matrix =
-  let tbl = Tbl.create 10 in
+  let tbl = Tbl.create 10
+  and mtx = Mutex.create () in
   fun n ->
-    match Tbl.find_opt tbl n with
-    | Some m -> m
-    | None   ->
-      let tri = signed_pascals_triangle n
-      and m = Array.make_matrix (n + 1) (n + 1) 0. in
-      let nth_row = Tbl.find tri n in
-      for i = 0 to n do
-        let a = Tbl.find tri i
-        and b = nth_row.(i) in
-        for j = 0 to i do
-          m.(i).(j) <- a.(j) *. b
-        done
-      done;
-      Tbl.add tbl n m;
-      m
+    Mutex.lock mtx;
+    let m =
+      match Tbl.find_opt tbl n with
+      | Some m -> m
+      | None ->
+        let tri = signed_pascals_triangle n
+        and m = Array.make_matrix (n + 1) (n + 1) 0. in
+        let nth_row = Tbl.find tri n in
+        for i = 0 to n do
+          let a = Tbl.find tri i
+          and b = nth_row.(i) in
+          for j = 0 to i do
+            m.(i).(j) <- a.(j) *. b
+          done
+        done;
+        Tbl.add tbl n m;
+        m
+    in
+    Mutex.unlock mtx;
+    m
 
 module type S = sig
   type vec
@@ -395,8 +404,8 @@ module Make (V : V.S) = struct
     let tangents =
       ( match tangents with
       | `Tangents tangents -> List.map V.normalize tangents
-      | `NonUniform        -> P.tangents ~uniform:false ~closed path
-      | `Uniform           -> P.tangents ~uniform:true ~closed path )
+      | `NonUniform -> P.tangents ~uniform:false ~closed path
+      | `Uniform -> P.tangents ~uniform:true ~closed path )
       |> Array.of_list
     in
     let len_ps = Array.length ps
@@ -475,7 +484,7 @@ module Make (V : V.S) = struct
           List.rev @@ fst @@ List.fold_left f ([], hd) tl
         in
         if order = 1 then make deltas else aux (n - 1) (order - 1) deltas
-      | _        -> failwith "impossible"
+      | _ -> failwith "impossible"
     in
     let n = List.length ps - 1 in
     if order < 0

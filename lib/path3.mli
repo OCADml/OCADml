@@ -205,7 +205,7 @@ val coplanar : ?eps:float -> t -> bool
 (** [bbox t]
 
     Compute the 3d bounding box of the path [t]. *)
-val bbox : t -> V3.bbox
+val bbox : t -> Gg.Box3.t
 
 (** {1 Sweeping Transform Helpers} *)
 

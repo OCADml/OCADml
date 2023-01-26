@@ -1,6 +1,7 @@
 # OCADml
 
-OCADml is a collection of types and functions facilitating Computer Aided
+OCADml is a collection of types and functions built on top of
+[Gg](https://erratique.ch/software/gg) facilitating Computer Aided
 Design (CAD) in OCaml. In particular, the style of design currently supported is
 that of 2D drawing and mesh generation via sweeping/extrusion.
 
@@ -16,13 +17,17 @@ may be helpful to check out a library utilizing them.
 ## CAD Package Specific Frontends
 
 This library only provides a means to generate point and face based geometries,
-in order to perform boolean operations, validation, and export, you'll need to
-work with a particular CAD package.
+in order to perform boolean operations and validation of properties such as
+manifoldness you'll need to work with a particular CAD package.
 
 ### OSCADml
 - [github](https://github.com/OCADml/OSCADml)
 - [docs](https://ocadml.github.io/OSCADml/OSCADml/index.html)
 - [examples](https://ocadml.github.io/OSCADml/OSCADml/index.html#examples)
+
+### OManifold
+- [github](https://github.com/OCADml/OManifold)
+- [docs](https://ocadml.github.io/OManifold/OManifold/index.html)
 
 ## Companion PPX
 

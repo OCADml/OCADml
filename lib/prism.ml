@@ -272,7 +272,7 @@ let bad_patches ~len ~bot_patch:bp ~top_patch:tp bot top =
   and show (a, b) = Printf.sprintf "(%i, %i)" a b in
   let check ~show ~msg f =
     match fold_init len f [] with
-    | []  -> ()
+    | [] -> ()
     | bad ->
       let f acc a = Printf.sprintf "%s; %s" acc (show a) in
       failwith @@ List.fold_left f (Printf.sprintf "%s: [" msg) bad ^ "]"
@@ -388,8 +388,8 @@ let prism ?debug ?fn ?(holes = `Flip) ?(outer = spec ()) bottom top =
   then invalid_arg "Polys must have same number of holes.";
   let hole_spec =
     match holes with
-    | `Same      -> fun _ -> outer
-    | `Flip      ->
+    | `Same -> fun _ -> outer
+    | `Flip ->
       let flipped = flip outer in
       fun _ -> flipped
     | `Spec spec -> fun _ -> spec
@@ -399,8 +399,8 @@ let prism ?debug ?fn ?(holes = `Flip) ?(outer = spec ()) bottom top =
       then
         fun i ->
         match Array.get specs i with
-        | `Same      -> outer
-        | `Flip      -> flip outer
+        | `Same -> outer
+        | `Flip -> flip outer
         | `Spec spec -> spec
       else invalid_arg "Mixed hole specs must match the number of holes."
   in
@@ -419,7 +419,7 @@ let prism ?debug ?fn ?(holes = `Flip) ?(outer = spec ()) bottom top =
 let linear_prism ?debug ?fn ?holes ?outer ?(center = false) ~height bottom =
   let bottom =
     let b = Poly3.of_poly2 bottom in
-    if center then Poly3.translate { x = 0.; y = 0.; z = height /. -2. } b else b
+    if center then Poly3.ztrans (height /. -2.) b else b
   in
-  let top = Poly3.translate { x = 0.; y = 0.; z = height } bottom in
+  let top = Poly3.ztrans height bottom in
   prism ?debug ?fn ?holes ?outer bottom top

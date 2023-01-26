@@ -24,6 +24,13 @@ type t = private
     (and thus, may cause problems in CGAL). *)
 val make : ?validate:bool -> ?holes:Path3.t list -> Path3.t -> t
 
+(** [of_paths ?validate ps]
+
+    Create a 3d polygon from a list of paths, with the outline first, followed
+    by the inner hole paths (if any), e.g. [(outer :: holes) as ps]. See
+    {!make} for details. *)
+val of_paths : ?validate:bool -> Path3.t list -> t
+
 (** [add_holes ?validate ~holes t]
 
     Add [holes] to [t]. If validate is [true] (as it is by default),
@@ -116,7 +123,7 @@ val box : ?center:bool -> ?plane:Plane.t -> thickness:V2.t -> V2.t -> t
 (** [bbox t]
 
     Compute the 3d bounding box of the polygon [t]. *)
-val bbox : t -> V3.bbox
+val bbox : t -> Gg.Box3.t
 
 (** [centroid ?eps t]
 

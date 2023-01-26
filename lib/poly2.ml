@@ -1,5 +1,3 @@
-open V
-
 type invalid =
   [ `SelfIntersection of int
   | `CrossIntersection of int * int
@@ -57,7 +55,7 @@ let validation ?(eps = Util.epsilon) = function
         if dist > eps
         then (
           let s1 = V2.{ a; b } in
-          let s1_normal = { x = -.diff.y /. dist; y = diff.x /. dist } in
+          let s1_normal = V2.(v (-.y diff /. dist) (x diff /. dist)) in
           let ref_v = V2.dot s1.a s1_normal
           and p2_idx = ref (!p1_idx + 1) in
           while !p2_idx < n do
@@ -126,6 +124,10 @@ let make ?(validate = true) ?(holes = []) outer =
     t )
   else t
 
+let of_paths ?validate = function
+  | [ outer ] | ([] as outer) -> make ?validate outer
+  | outer :: holes -> make ?validate ~holes outer
+
 let add_holes ?validate ~holes t =
   make ?validate ~holes:(List.rev_append t.holes holes) t.outer
 
@@ -141,10 +143,11 @@ let ellipse ?fn ?fa ?fs radii = make @@ Path2.ellipse ?fn ?fa ?fs radii
 let star ~r1 ~r2 n = make (Path2.star ~r1 ~r2 n)
 
 let ring ?fn ?fa ?fs ~thickness radii =
-  if thickness.x < radii.x
-     && thickness.y < radii.y
-     && thickness.x > 0.
-     && thickness.y > 0.
+  if V2.(
+       x thickness < x radii
+       && y thickness < y radii
+       && x thickness > 0.
+       && y thickness > 0.)
   then
     make
       ~holes:[ List.rev @@ Path2.ellipse ?fn ?fa ?fs (V2.sub radii thickness) ]
@@ -152,7 +155,11 @@ let ring ?fn ?fa ?fs ~thickness radii =
   else invalid_arg "Ring thickness must be less than the outer radius and above zero."
 
 let box ?center ~thickness dims =
-  if thickness.x < dims.x && thickness.y < dims.y && thickness.x > 0. && thickness.y > 0.
+  if V2.(
+       x thickness < x dims
+       && y thickness < y dims
+       && x thickness > 0.
+       && y thickness > 0.)
   then (
     let holes = [ List.rev @@ Path2.square ?center (V2.sub dims thickness) ] in
     make ~holes (Path2.square ?center dims) )

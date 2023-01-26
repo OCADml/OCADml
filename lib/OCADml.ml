@@ -4,40 +4,28 @@
     2/3-dimensional space. *)
 
 (** 4-dimensional vector *)
-type v4 = V.v4 =
-  { x : float
-  ; y : float
-  ; z : float
-  ; w : float
-  }
-
-(** 3-dimensional vector *)
-type v3 = V.v3 =
-  { x : float
-  ; y : float
-  ; z : float
-  }
+type v4 = Gg.v4
 
 (** 2-dimensional vector *)
-type v2 = V.v2 =
-  { x : float
-  ; y : float
-  }
+type v2 = Gg.v2
+
+(** 3-dimensional vector *)
+type v3 = Gg.v3
 
 (** [v2 x y]
 
     Construct a 2d vector from [x] and [y] coordinates. *)
-let[@inline] v2 x y = { x; y }
+let[@inline] v2 x y = Gg.V2.v x y
 
 (** [v3 x y z]
 
     Construct a 3d vector from [x], [y], and [z] coordinates. *)
-let[@inline] v3 x y z = { x; y; z }
+let[@inline] v3 x y z = Gg.V3.v x y z
 
 (** [v4 x y z]
 
     Construct a 4d vector from [x], [y], [z], and [w] coordinates. *)
-let[@inline] v4 x y z w = { x; y; z; w }
+let[@inline] v4 x y z w = Gg.V4.v x y z w
 
 (** 2-dimensional vector type, including basic mathematical/geometrical
     operations and transformations, allowing for points in 2d space, and higher
@@ -66,21 +54,21 @@ module V2 = struct
 
       Apply 3d affine transformation matrix [m] to the vector [t], taking it into
       the 3rd dimension. *)
-  let[@inline] affine3 m { x; y } = Affine3.transform m (v3 x y 0.)
+  let[@inline] affine3 m p = Affine3.transform m (V3.of_v2 p)
 
   (** [quaternion ?about q t]
 
       Rotate [t] with the quaternion [q] around the origin (or the point [about]
       if provided), taking it into the 3rd dimension. *)
-  let[@inline] quaternion ?about q { x; y } = Quaternion.transform ?about q (v3 x y 0.)
+  let[@inline] quaternion ?about q p = Quaternion.transform ?about q (V3.of_v2 p)
 
   (** [axis_rotate ?about ax a t]
 
       Rotates the vector [t] around the axis [ax] through the origin (or the
       point [about] if provided) by the angle [a], taking it into the third
       dimension. *)
-  let[@inline] axis_rotate ?about ax a { x; y } =
-    Quaternion.(transform ?about (make ax a) (v3 x y 0.))
+  let[@inline] axis_rotate ?about ax a p =
+    Quaternion.(transform ?about (make ax a) (V3.of_v2 p))
 end
 
 (** 3-dimensional vector type, including basic mathematical/geometrical
@@ -132,17 +120,7 @@ module Affine3 = struct
       Project [t] down into a 2d affine transformation matrix (z axis components
       dropped). *)
   let project (t : t) =
-    Affine2.
-      { r0c0 = t.r0c0
-      ; r0c1 = t.r0c1
-      ; r0c2 = t.r0c3
-      ; r1c0 = t.r1c0
-      ; r1c1 = t.r1c1
-      ; r1c2 = t.r1c3
-      ; r2c0 = 0.
-      ; r2c1 = 0.
-      ; r2c2 = t.r3c3
-      }
+    Affine2.v (e00 t) (e01 t) (e03 t) (e10 t) (e11 t) (e13 t) 0. 0. (e33 t)
 
   (** [of_quaternion q]
 
@@ -161,12 +139,20 @@ module CubicSpline = CubicSpline
 module Poly2 = Poly2
 module PolyText = PolyText
 
+(** {2 Gg re-exports} *)
+
+module Box2 = Gg.Box2
+
 (** {1 3-dimensional paths, coplanar polygons, and meshes} *)
 
 module Path3 = Path3
 module Bezier3 = Bezier3
 module Poly3 = Poly3
 module Mesh = Mesh
+
+(** {2 Gg re-exports} *)
+
+module Box3 = Gg.Box3
 
 (** {1 Utilities} *)
 

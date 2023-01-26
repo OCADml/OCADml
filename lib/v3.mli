@@ -1,9 +1,5 @@
 (** 3d vector *)
-type t = V.v3 =
-  { x : float
-  ; y : float
-  ; z : float
-  }
+type t = Gg.v3
 
 (** [v x y z]
 
@@ -21,11 +17,6 @@ val of_tup : float * float * float -> t
 val to_tup : t -> float * float * float
 
 include V.S with type t := t (** @inline *)
-
-(** [bbox_volume bb]
-
-    Compute the volume of the bounding box [bb]. *)
-val bbox_volume : bbox -> float
 
 (** {1 Transformations}
 
