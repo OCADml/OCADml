@@ -18,7 +18,7 @@ let bbox = function
       min, max
     in
     let min, max = List.fold_left f (hd, hd) tl in
-    Gg.Box3.v min max
+    Gg.Box3.of_pts min max
 
 let circle ?fn ?fa ?fs ?(plane = Plane.xy) r =
   Path2.lift plane (Path2.circle ?fn ?fa ?fs r)

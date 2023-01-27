@@ -31,7 +31,7 @@ let bbox = function
       min, max
     in
     let min, max = List.fold_left f (hd, hd) tl in
-    Gg.Box2.v min max
+    Gg.Box2.of_pts min max
 
 let centroid ?(eps = Util.epsilon) = function
   | [] | [ _ ] | [ _; _ ] -> invalid_arg "Polygon must have more than two points."
