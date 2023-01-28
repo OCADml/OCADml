@@ -1,3 +1,8 @@
+## v0.3.1
+
+- v0.3.0 being marked unavailable on opam due to bugs with Path{2,3}.bbox
+- add dune to package dependencies
+
 ## v0.3.0
 
 - add gg library dependency
