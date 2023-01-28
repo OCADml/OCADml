@@ -24,6 +24,7 @@
  (depends
   (ocaml
    (>= 4.14.0))
+  dune
   (gg
    (>= 1.0.0))
   (cairo2
