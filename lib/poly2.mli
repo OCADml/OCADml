@@ -45,6 +45,17 @@ val make : ?validate:bool -> ?holes:Path2.t list -> Path2.t -> t
     {!make} for details. *)
 val of_paths : ?validate:bool -> Path2.t list -> t
 
+(** [of_list ps]
+
+    Create a 2d polygon from a list of paths. Same as {!of_paths} with
+    [~validate:false]. *)
+val of_list : Path2.t list -> t
+
+(** [to_list t]
+
+    Convert the polygon [t] into a list with the [outer] path as the head. *)
+val to_list : t -> Path2.t list
+
 (** [add_holes ?validate ~holes t]
 
     Add [holes] to [t]. If validate is [true] (as it is by default),
@@ -175,6 +186,8 @@ val offset
   -> float
   -> t
   -> t
+
+(** {1 Transformations} *)
 
 (** [map f t]
 

@@ -24,6 +24,9 @@ let of_paths ?validate = function
   | [ outer ] | ([] as outer) -> make ?validate outer
   | outer :: holes -> make ?validate ~holes outer
 
+let[@inline] of_list l = of_paths ~validate:false l
+let[@inline] to_list t = t.outer :: t.holes
+
 let add_holes ?validate ~holes t =
   make ?validate ~holes:(List.rev_append t.holes holes) t.outer
 

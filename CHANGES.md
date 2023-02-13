@@ -1,3 +1,6 @@
+## v0.3.2
+- add `of_list` and `to_list` convenience functions to `Poly2` and `Poly3`
+
 ## v0.3.1
 
 - v0.3.0 being marked unavailable on opam due to bugs with Path{2,3}.bbox
