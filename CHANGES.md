@@ -1,6 +1,7 @@
 ## v.0.4.0
 
-- break `PolyText` into optional sub-library (making cairo2 a depopt)
+- make cairo2 a depopt and break `PolyText` into optional sub-library
+ (now free of non-OCaml dependencies)
 - fix bug in `Path2.point_inside` (always returning outside)
 
 ## v0.3.2
