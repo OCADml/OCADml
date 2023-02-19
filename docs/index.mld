@@ -7,7 +7,8 @@ that of 2D drawing and mesh generation via sweeping/extrusion.
 
 {1:api API}
 
-{!module-OCADml} -- top level library interface
+- {!module-OCADml} -- top level library interface
+- {!module-PolyText} -- point representations of text (only installed if cairo is available)
 
 {2 Vectors and transformations}
 - {{!OCADml.V2} [V2]} -- 2d vector operations
@@ -23,7 +24,7 @@ that of 2D drawing and mesh generation via sweeping/extrusion.
 - {{!OCADml.Bezier2} [Bezier2]} -- 2d bezier curves, patches, and splines
 - {{!OCADml.CubicSpline} [CubicSpline]} -- cubic spline interpolation of 2d paths
 - {{!OCADml.Poly2} [Poly2]} -- 2d polygons (outer, and zero or more inner paths)
-- {{!OCADml.PolyText} [PolyText]} -- point representations of text (via cairo)
+- {{!PolyText} [PolyText]} -- point representations of text (via cairo)
 
 {2 3d paths, coplanar polygons, and meshes}
 - {{!OCADml.Path3} [Path3]} -- generation and manipulation of 3d paths

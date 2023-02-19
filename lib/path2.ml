@@ -53,7 +53,7 @@ let area ?(signed = false) = function
     (if signed then area else Float.abs area) /. 2.
 
 let point_inside ?(eps = Util.epsilon) ?(nonzero = false) t p =
-  if Gg.Box2.mem p (bbox t)
+  if not @@ Gg.Box2.mem p (bbox t)
   then `Outside
   else (
     let segs = segment ~closed:true t in
@@ -94,7 +94,7 @@ let point_inside ?(eps = Util.epsilon) ?(nonzero = false) t p =
         and p1 = V2.sub s.b p in
         if V2.(
              ((y p1 > eps && y p0 <= eps) || (y p1 <= eps && y p0 > eps))
-             && -.eps < x p0 -. (y p0 *. (x p1 -. x p0) /. (y p1 -. y p0)))
+             && -.eps < x p0 -. (y p0 *. (x p1 -. x p0) /. (y p1 -. y p0)) )
         then crossings + 1
         else crossings
       in

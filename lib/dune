@@ -1,4 +1,4 @@
 (library
  (name OCADml)
  (public_name OCADml)
- (libraries gg cairo2 threads))
+ (libraries gg threads))

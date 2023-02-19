@@ -1,19 +1,20 @@
+open OCADml
 open Cairo
-open V
-module Bez = Bezier.Make (V2)
 
 let path_to_outlines ?(fn = 5) data =
   let f (paths, ps, last_p) = function
     | MOVE_TO (x, y) -> paths, ps, v2 x y
     | LINE_TO (x, y) -> paths, last_p :: ps, v2 x y
     | CURVE_TO (x1, y1, x2, y2, x3, y3) ->
-      let bez = Bez.make' [| last_p; v2 x1 y1; v2 x2 y2; v2 x3 y3 |] in
-      paths, Bez.curve ~fn ~rev:true ~endpoint:false ~init:ps bez, v2 x3 y3
+      let bez = Bezier2.make [ last_p; v2 x1 y1; v2 x2 y2; v2 x3 y3 ] in
+      paths, Bezier2.curve ~fn ~rev:true ~endpoint:false ~init:ps bez, v2 x3 y3
     | CLOSE_PATH ->
       let path =
         match ps with
         | [] -> [ last_p ]
-        | _ -> if V2.approx (Util.last_element ps) last_p then ps else last_p :: ps
+        | hd :: tl as ps ->
+          let first = List.fold_left (fun _ e -> e) hd tl in
+          if V2.approx first last_p then ps else last_p :: ps
       in
       path :: paths, [], last_p
   in
@@ -44,8 +45,8 @@ let text ?fn ?(center = false) ?slant ?weight ?(size = 10.) ~font txt =
           | [] -> Poly2.make ~holes (List.rev outer) :: polys
           | (pt :: _ as hd) :: tl ->
             ( match Path2.point_inside outer pt with
-            | `Inside -> aux polys outer (hd :: holes) tl
-            | _ -> aux (Poly2.make ~holes (List.rev outer) :: polys) hd [] tl )
+              | `Inside -> aux polys outer (hd :: holes) tl
+              | _ -> aux (Poly2.make ~holes (List.rev outer) :: polys) hd [] tl )
           | _ -> aux polys outer holes tl
         in
         aux acc outer [] tl

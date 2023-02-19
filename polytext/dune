@@ -1,0 +1,5 @@
+(library
+ (name PolyText)
+ (public_name OCADml.PolyText)
+ (optional)
+ (libraries OCADml gg cairo2 threads))

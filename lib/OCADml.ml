@@ -137,7 +137,6 @@ module Path2 = Path2
 module Bezier2 = Bezier2
 module CubicSpline = CubicSpline
 module Poly2 = Poly2
-module PolyText = PolyText
 
 (** {2 Gg re-exports} *)
 
