@@ -51,11 +51,11 @@ let prune_rows ?(min_dist = 0.05) = function
     List.rev drop, List.rev keep
 
 let of_rows
-    ?(rev = false)
-    ?(endcaps = `Both)
-    ?(col_wrap = true)
-    ?(style = `Default)
-    layers
+  ?(rev = false)
+  ?(endcaps = `Both)
+  ?(col_wrap = true)
+  ?(style = `Default)
+  layers
   =
   let looped =
     match endcaps with
@@ -103,7 +103,7 @@ let of_rows
         if V3.(
              distance ps.(a) ps.(b) > Util.epsilon
              && distance ps.(b) ps.(c) > Util.epsilon
-             && distance ps.(c) ps.(a) > Util.epsilon)
+             && distance ps.(c) ps.(a) > Util.epsilon )
         then if rev then [ c; b; a ] :: acc else [ a; b; c ] :: acc
         else acc
       in
@@ -271,10 +271,11 @@ let of_path3 ?(rev = false) layer =
   in
   { size; points; faces = [ (if rev then List.rev face else face) ] }
 
-let of_poly2 ?rev = function
-  | Poly2.{ outer; holes = [] } -> of_path2 ?rev outer
-  | Poly2.{ outer; holes } ->
-    let points, faces = PolyHoles.partition ?rev ~holes outer in
+let of_poly2 ?rev p2 =
+  match Poly2.holes p2 with
+  | [] -> of_path2 ?rev (Poly2.outer p2)
+  | holes ->
+    let points, faces = PolyHoles.partition ?rev ~holes (Poly2.outer p2) in
     make ~points ~faces
 
 let of_poly3 ?rev = function
@@ -510,41 +511,41 @@ let hull = function
       loop 0 ps
     in
     ( match non_coplanar plane points with
-    | None -> of_path3 @@ Path2.(lift plane @@ hull @@ Path3.project plane points)
-    | Some d ->
-      let ps = Array.of_list points in
-      let add_tri a b c ((triangles, planes) as acc) =
-        try [ a; b; c ] :: triangles, Plane.make ps.(a) ps.(b) ps.(c) :: planes with
-        | Invalid_argument _ -> acc (* invalid triangle (points are collinear) *)
-      and[@warning "-partial-match"] add_edges edges [ a; b; c ] =
-        EdgeSet.add (c, a) edges |> EdgeSet.add (b, c) |> EdgeSet.add (a, b)
-      and b, c = if Plane.is_point_above plane ps.(d) then c, b else b, c in
-      let triangles, planes =
-        add_tri a b c ([], []) |> add_tri d b a |> add_tri c d a |> add_tri b d c
-      in
-      let f idx ((triangles, planes) as acc) =
-        if idx <> a && idx <> b && idx <> c && idx <> d (* skip starting points *)
-        then (
-          (* collect half edges of triangles that are in conflict with the points
+      | None -> of_path3 @@ Path2.(lift plane @@ hull @@ Path3.project plane points)
+      | Some d ->
+        let ps = Array.of_list points in
+        let add_tri a b c ((triangles, planes) as acc) =
+          try [ a; b; c ] :: triangles, Plane.make ps.(a) ps.(b) ps.(c) :: planes with
+          | Invalid_argument _ -> acc (* invalid triangle (points are collinear) *)
+        and[@warning "-partial-match"] add_edges edges [ a; b; c ] =
+          EdgeSet.add (c, a) edges |> EdgeSet.add (b, c) |> EdgeSet.add (a, b)
+        and b, c = if Plane.is_point_above plane ps.(d) then c, b else b, c in
+        let triangles, planes =
+          add_tri a b c ([], []) |> add_tri d b a |> add_tri c d a |> add_tri b d c
+        in
+        let f idx ((triangles, planes) as acc) =
+          if idx <> a && idx <> b && idx <> c && idx <> d (* skip starting points *)
+          then (
+            (* collect half edges of triangles that are in conflict with the points
               at idx, pruning the conflicting triangles and their planes in the process *)
-          let half_edges, triangles, planes =
-            let f (edges, keep_tri, keep_pln) tri pln =
-              if Plane.distance_to_point pln ps.(idx) > Util.epsilon
-              then add_edges edges tri, keep_tri, keep_pln
-              else edges, tri :: keep_tri, pln :: keep_pln
+            let half_edges, triangles, planes =
+              let f (edges, keep_tri, keep_pln) tri pln =
+                if Plane.distance_to_point pln ps.(idx) > Util.epsilon
+                then add_edges edges tri, keep_tri, keep_pln
+                else edges, tri :: keep_tri, pln :: keep_pln
+              in
+              List.fold_left2 f (EdgeSet.empty, [], []) triangles planes
             in
-            List.fold_left2 f (EdgeSet.empty, [], []) triangles planes
-          in
-          (* form new triangles with the outer perimeter (horizon) of the set of
+            (* form new triangles with the outer perimeter (horizon) of the set of
                conflicting triangles and the point at idx *)
-          let non_internal (a, b) acc =
-            if EdgeSet.mem (b, a) half_edges then acc else add_tri a b idx acc
-          in
-          EdgeSet.fold non_internal half_edges (triangles, planes) )
-        else acc
-      in
-      let faces, _ = Util.fold_init (Array.length ps) f (triangles, planes) in
-      { size = Array.length ps; faces; points } )
+            let non_internal (a, b) acc =
+              if EdgeSet.mem (b, a) half_edges then acc else add_tri a b idx acc
+            in
+            EdgeSet.fold non_internal half_edges (triangles, planes) )
+          else acc
+        in
+        let faces, _ = Util.fold_init (Array.length ps) f (triangles, planes) in
+        { size = Array.length ps; faces; points } )
 
 let translate p t = { t with points = Path3.translate p t.points }
 let xtrans x t = { t with points = Path3.xtrans x t.points }
@@ -591,20 +592,20 @@ let to_binstl ~rev path t =
     write_unsigned_long oc (List.length t.faces);
     List.iter
       (function
-        | [ a; b; c ] ->
-          let a, b, c =
-            if rev then pts.(c), pts.(b), pts.(a) else pts.(a), pts.(b), pts.(c)
-          in
-          (* facet normal *)
-          let normal = V3.(normalize @@ cross (sub c a) (sub b a)) in
-          write_v3 oc normal;
-          (* vertices *)
-          write_v3 oc a;
-          write_v3 oc b;
-          write_v3 oc c;
-          (* attribute byte count (set to zero) *)
-          Out_channel.output_string oc "\000\000"
-        | _ -> failwith "Mesh should be triangulated for stl serialization." )
+       | [ a; b; c ] ->
+         let a, b, c =
+           if rev then pts.(c), pts.(b), pts.(a) else pts.(a), pts.(b), pts.(c)
+         in
+         (* facet normal *)
+         let normal = V3.(normalize @@ cross (sub c a) (sub b a)) in
+         write_v3 oc normal;
+         (* vertices *)
+         write_v3 oc a;
+         write_v3 oc b;
+         write_v3 oc c;
+         (* attribute byte count (set to zero) *)
+         Out_channel.output_string oc "\000\000"
+       | _ -> failwith "Mesh should be triangulated for stl serialization." )
       t.faces
   in
   Out_channel.with_open_bin path f
@@ -629,20 +630,20 @@ let to_stl ~rev path t =
     Printf.fprintf oc "solid OCADml_Mesh";
     List.iter
       (function
-        | [ a; b; c ] ->
-          let a, b, c =
-            if rev then pts.(c), pts.(b), pts.(a) else pts.(a), pts.(b), pts.(c)
-          in
-          let normal = V3.(normalize @@ cross (sub c a) (sub b a)) in
-          Out_channel.output_string oc "\n  facet normal ";
-          write_v3 oc normal;
-          Out_channel.output_string oc "\n    outer loop";
-          write_vertex oc a;
-          write_vertex oc b;
-          write_vertex oc c;
-          Out_channel.output_string oc "\n    endloop";
-          Out_channel.output_string oc "\n  endfacet"
-        | _ -> failwith "Mesh should be triangulated for stl serialization." )
+       | [ a; b; c ] ->
+         let a, b, c =
+           if rev then pts.(c), pts.(b), pts.(a) else pts.(a), pts.(b), pts.(c)
+         in
+         let normal = V3.(normalize @@ cross (sub c a) (sub b a)) in
+         Out_channel.output_string oc "\n  facet normal ";
+         write_v3 oc normal;
+         Out_channel.output_string oc "\n    outer loop";
+         write_vertex oc a;
+         write_vertex oc b;
+         write_vertex oc c;
+         Out_channel.output_string oc "\n    endloop";
+         Out_channel.output_string oc "\n  endfacet"
+       | _ -> failwith "Mesh should be triangulated for stl serialization." )
       t.faces;
     Printf.fprintf oc "\nendsolid OCADml_Mesh\n"
   in

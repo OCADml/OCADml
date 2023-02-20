@@ -235,14 +235,14 @@ type poly_morph =
       }
 
 let sweep'
-    ?style
-    ?check_valid
-    ?(merge = true)
-    ?(winding = `CCW)
-    ?caps
-    ?progress
-    ~transforms
-    shape
+  ?style
+  ?check_valid
+  ?(merge = true)
+  ?(winding = `CCW)
+  ?caps
+  ?progress
+  ~transforms
+  shape
   =
   let outer_wind, hole_wind =
     match winding with
@@ -251,16 +251,13 @@ let sweep'
     | `NoCheck -> `NoCheck, `NoCheck
   and outer, holes, refine, ez =
     match shape with
-    | Fixed Poly2.{ outer; holes } ->
-      `Fixed outer, List.map (fun h -> `Fixed h) holes, None, None
-    | Morph
-        { outer_map
-        ; hole_map
-        ; refine
-        ; ez
-        ; a = { outer = oa; holes = ha }
-        ; b = { outer = ob; holes = hb }
-        } ->
+    | Fixed p ->
+      `Fixed (Poly2.outer p), List.map (fun h -> `Fixed h) (Poly2.holes p), None, None
+    | Morph { outer_map; hole_map; refine; ez; a; b } ->
+      let oa = Poly2.outer a
+      and ha = Poly2.holes a
+      and ob = Poly2.outer b
+      and hb = Poly2.holes b in
       let wrap m a b =
         let same =
           try List.for_all2 V2.approx a b with
@@ -290,13 +287,13 @@ let sweep'
       outer, holes, refine, ez
   in
   let morph
-      ?(sealed = true)
-      ?(top_mode = radius_mode ())
-      ?(bot_mode = radius_mode ())
-      ~winding
-      ~top
-      ~bot
-      shape
+    ?(sealed = true)
+    ?(top_mode = radius_mode ())
+    ?(bot_mode = radius_mode ())
+    ~winding
+    ~top
+    ~bot
+    shape
     =
     let n_trans = List.length transforms in
     let get_shape, bot_shape, len_bot, top_shape, len_top =
@@ -473,14 +470,16 @@ let sweep'
     | None, [] -> no_holes `Flat `Flat
     | Some `Looped, _ ->
       ( match shape with
-      | Fixed Poly2.{ outer; holes } ->
-        let f ~winding path =
-          let path = Mesh0.enforce_winding winding path in
-          List.map (fun m -> Path2.affine3 m path) transforms
-          |> Mesh0.of_rows ?style ~endcaps:`Loop
-        in
-        Mesh0.join (f ~winding:outer_wind outer :: List.map (f ~winding:hole_wind) holes)
-      | Morph _ -> invalid_arg "Cannot loop a morph (see skin)." )
+        | Fixed poly ->
+          let outer = Poly2.outer poly
+          and holes = Poly2.holes poly in
+          let f ~winding path =
+            let path = Mesh0.enforce_winding winding path in
+            List.map (fun m -> Path2.affine3 m path) transforms
+            |> Mesh0.of_rows ?style ~endcaps:`Loop
+          in
+          Mesh0.join (f ~winding:outer_wind outer :: List.map (f ~winding:hole_wind) holes)
+        | Morph _ -> invalid_arg "Cannot loop a morph (see skin)." )
     | Some (`Caps { top; bot }), holes -> with_holes top bot holes
     | None, holes -> with_holes `Flat `Flat holes
   in
@@ -490,18 +489,18 @@ let sweep ?style ?check_valid ?merge ?winding ?caps ~transforms shape =
   sweep' ?style ?check_valid ?merge ?winding ?caps ~transforms (Fixed shape)
 
 let morphing_sweep
-    ?(style = `MinEdge)
-    ?check_valid
-    ?merge
-    ?winding
-    ?(caps = flat_caps)
-    ?(outer_map = `Direct `ByLen)
-    ?(hole_map = `Same)
-    ?refine
-    ?ez
-    ~transforms
-    a
-    b
+  ?(style = `MinEdge)
+  ?check_valid
+  ?merge
+  ?winding
+  ?(caps = flat_caps)
+  ?(outer_map = `Direct `ByLen)
+  ?(hole_map = `Same)
+  ?refine
+  ?ez
+  ~transforms
+  a
+  b
   =
   sweep'
     ?check_valid
@@ -514,20 +513,20 @@ let morphing_sweep
     (Morph { outer_map; hole_map; refine; ez; a; b })
 
 let linear'
-    ?style
-    ?check_valid
-    ?merge
-    ?winding
-    ?fa
-    ?slices
-    ?scale_ez
-    ?twist_ez
-    ?scale
-    ?(twist = 0.)
-    ?(center = false)
-    ?(caps = flat_caps)
-    ~height
-    shape
+  ?style
+  ?check_valid
+  ?merge
+  ?winding
+  ?fa
+  ?slices
+  ?scale_ez
+  ?twist_ez
+  ?scale
+  ?(twist = 0.)
+  ?(center = false)
+  ?(caps = flat_caps)
+  ~height
+  shape
   =
   let cap_height = function
     | `Flat | `Empty -> 0.
@@ -555,20 +554,20 @@ let linear'
   sweep' ?style ?check_valid ?merge ?winding ~caps ~progress:`AutoPoints ~transforms shape
 
 let extrude
-    ?style
-    ?check_valid
-    ?merge
-    ?winding
-    ?fa
-    ?slices
-    ?scale_ez
-    ?twist_ez
-    ?scale
-    ?twist
-    ?center
-    ?caps
-    ~height
-    shape
+  ?style
+  ?check_valid
+  ?merge
+  ?winding
+  ?fa
+  ?slices
+  ?scale_ez
+  ?twist_ez
+  ?scale
+  ?twist
+  ?center
+  ?caps
+  ~height
+  shape
   =
   linear'
     ?style
@@ -587,25 +586,25 @@ let extrude
     (Fixed shape)
 
 let morph
-    ?(style = `MinEdge)
-    ?check_valid
-    ?merge
-    ?winding
-    ?fa
-    ?(slices = 10)
-    ?scale_ez
-    ?twist_ez
-    ?scale
-    ?twist
-    ?center
-    ?caps
-    ?(outer_map = `Direct `ByLen)
-    ?(hole_map = `Same)
-    ?refine
-    ?ez
-    ~height
-    a
-    b
+  ?(style = `MinEdge)
+  ?check_valid
+  ?merge
+  ?winding
+  ?fa
+  ?(slices = 10)
+  ?scale_ez
+  ?twist_ez
+  ?scale
+  ?twist
+  ?center
+  ?caps
+  ?(outer_map = `Direct `ByLen)
+  ?(hole_map = `Same)
+  ?refine
+  ?ez
+  ~height
+  a
+  b
   =
   linear'
     ~style
@@ -624,23 +623,23 @@ let morph
     (Morph { outer_map; hole_map; refine; ez; a; b })
 
 let helix'
-    ?style
-    ?check_valid
-    ?merge
-    ?fn
-    ?fa
-    ?fs
-    ?scale_ez
-    ?twist_ez
-    ?scale
-    ?twist
-    ?(caps = flat_caps)
-    ?(left = true)
-    ~n_turns
-    ~pitch
-    ?r2
-    r1
-    shape
+  ?style
+  ?check_valid
+  ?merge
+  ?fn
+  ?fa
+  ?fs
+  ?scale_ez
+  ?twist_ez
+  ?scale
+  ?twist
+  ?(caps = flat_caps)
+  ?(left = true)
+  ~n_turns
+  ~pitch
+  ?r2
+  r1
+  shape
   =
   let transforms =
     Path3.helical_transforms
@@ -667,23 +666,23 @@ let helix'
     shape
 
 let helix_extrude
-    ?style
-    ?check_valid
-    ?merge
-    ?fn
-    ?fa
-    ?fs
-    ?scale_ez
-    ?twist_ez
-    ?scale
-    ?twist
-    ?caps
-    ?left
-    ~n_turns
-    ~pitch
-    ?r2
-    r1
-    shape
+  ?style
+  ?check_valid
+  ?merge
+  ?fn
+  ?fa
+  ?fs
+  ?scale_ez
+  ?twist_ez
+  ?scale
+  ?twist
+  ?caps
+  ?left
+  ~n_turns
+  ~pitch
+  ?r2
+  r1
+  shape
   =
   helix'
     ?style
@@ -705,28 +704,28 @@ let helix_extrude
     (Fixed shape)
 
 let helix_morph
-    ?(style = `MinEdge)
-    ?check_valid
-    ?merge
-    ?fn
-    ?fa
-    ?fs
-    ?scale_ez
-    ?twist_ez
-    ?scale
-    ?twist
-    ?caps
-    ?(outer_map = `Direct `ByLen)
-    ?(hole_map = `Same)
-    ?refine
-    ?ez
-    ?left
-    ~n_turns
-    ~pitch
-    ?r2
-    r1
-    a
-    b
+  ?(style = `MinEdge)
+  ?check_valid
+  ?merge
+  ?fn
+  ?fa
+  ?fs
+  ?scale_ez
+  ?twist_ez
+  ?scale
+  ?twist
+  ?caps
+  ?(outer_map = `Direct `ByLen)
+  ?(hole_map = `Same)
+  ?refine
+  ?ez
+  ?left
+  ~n_turns
+  ~pitch
+  ?r2
+  r1
+  a
+  b
   =
   helix'
     ~style
@@ -748,18 +747,18 @@ let helix_morph
     (Morph { outer_map; hole_map; refine; ez; a; b })
 
 let path'
-    ?style
-    ?check_valid
-    ?merge
-    ?winding
-    ?caps
-    ?(euler = false)
-    ?scale_ez
-    ?twist_ez
-    ?scale
-    ?twist
-    ~path
-    shape
+  ?style
+  ?check_valid
+  ?merge
+  ?winding
+  ?caps
+  ?(euler = false)
+  ?scale_ez
+  ?twist_ez
+  ?scale
+  ?twist
+  ~path
+  shape
   =
   let mode = if euler then `Euler else `Auto in
   let transforms = Path3.to_transforms ~mode ?scale_ez ?twist_ez ?scale ?twist path in
@@ -777,18 +776,18 @@ let path'
   sweep' ?style ?check_valid ?merge ?winding ?caps ?progress ~transforms shape
 
 let path_extrude
-    ?style
-    ?check_valid
-    ?merge
-    ?winding
-    ?caps
-    ?euler
-    ?scale_ez
-    ?twist_ez
-    ?scale
-    ?twist
-    ~path
-    shape
+  ?style
+  ?check_valid
+  ?merge
+  ?winding
+  ?caps
+  ?euler
+  ?scale_ez
+  ?twist_ez
+  ?scale
+  ?twist
+  ~path
+  shape
   =
   path'
     ?style
@@ -805,23 +804,23 @@ let path_extrude
     (Fixed shape)
 
 let path_morph
-    ?(style = `MinEdge)
-    ?check_valid
-    ?merge
-    ?winding
-    ?(caps = flat_caps)
-    ?(outer_map = `Direct `ByLen)
-    ?(hole_map = `Same)
-    ?refine
-    ?ez
-    ?euler
-    ?scale_ez
-    ?twist_ez
-    ?scale
-    ?twist
-    ~path
-    a
-    b
+  ?(style = `MinEdge)
+  ?check_valid
+  ?merge
+  ?winding
+  ?(caps = flat_caps)
+  ?(outer_map = `Direct `ByLen)
+  ?(hole_map = `Same)
+  ?refine
+  ?ez
+  ?euler
+  ?scale_ez
+  ?twist_ez
+  ?scale
+  ?twist
+  ~path
+  a
+  b
   =
   path'
     ~style
@@ -838,16 +837,16 @@ let path_morph
     (Morph { outer_map; hole_map; refine; ez; a; b })
 
 let revolve
-    ?style
-    ?check_valid
-    ?merge
-    ?winding
-    ?fn
-    ?fa
-    ?fs
-    ?(skew = v2 0. 0.)
-    ?angle
-    shape
+  ?style
+  ?check_valid
+  ?merge
+  ?winding
+  ?fn
+  ?fa
+  ?fs
+  ?(skew = v2 0. 0.)
+  ?angle
+  shape
   =
   let bb = Poly2.bbox shape in
   if Gg.Box2.minx bb < 0.

@@ -13,6 +13,14 @@ type t = private
   ; holes : Path3.t list
   }
 
+(** {1 Accessors} *)
+
+(** [outer t] gets the outer path of [t] *)
+val outer : t -> Path3.t
+
+(** [holes t] gets the inner (hole) paths of [t] *)
+val holes : t -> Path3.t list
+
 (** {1 Creation and 2d-3d conversion} *)
 
 (** [make ?validate ?holes outer]
@@ -35,12 +43,32 @@ val of_paths : ?validate:bool -> Path3.t list -> t
 
     Create a 3d polygon from a list of paths. Same as {!of_paths} with
     [~validate:false]. *)
-val of_list : Path3.t list -> t
+val of_list : V3.t list list -> t
 
 (** [to_list t]
 
     Convert the polygon [t] into a list with the [outer] path as the head. *)
-val to_list : t -> Path3.t list
+val to_list : t -> V3.t list list
+
+(** [of_seq s]
+
+     Construct a polygon from a sequence of sequences of points [s]. *)
+val of_seq : V3.t Seq.t Seq.t -> t
+
+(** [to_seq t]
+
+     Convert the polygon [t] to a sequence of sequences of points. *)
+val to_seq : t -> V3.t Seq.t Seq.t
+
+(** [of_array a]
+
+     Construct a polygon from an array of arrays of points [a]. *)
+val of_array : V3.t array array -> t
+
+(** [to_array t]
+
+     Convert the polygon [t] to an array of arrays of points. *)
+val to_array : t -> V3.t array array
 
 (** [add_holes ?validate ~holes t]
 

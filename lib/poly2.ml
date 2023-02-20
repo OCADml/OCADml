@@ -131,6 +131,31 @@ let of_paths ?validate = function
 let[@inline] of_list l = of_paths ~validate:false l
 let[@inline] to_list t = t.outer :: t.holes
 
+let of_seq s =
+  let[@tail_mod_cons] rec loop s =
+    match Seq.uncons s with
+    | Some (hd, tl) -> List.of_seq hd :: loop tl
+    | None -> []
+  in
+  match Seq.uncons s with
+  | Some (outer, holes) ->
+    let outer = List.of_seq outer in
+    make ~validate:false ~holes:(loop holes) outer
+  | None -> make ~validate:false []
+
+let to_seq t =
+  let holes = Seq.map List.to_seq @@ List.to_seq t.holes in
+  Seq.cons (List.to_seq t.outer) holes
+
+let of_array a = of_list @@ Array.fold_right (fun h acc -> Array.to_list h :: acc) a []
+
+let to_array t =
+  let n_holes = List.length t.holes in
+  let a = Array.make (n_holes + 1) [||] in
+  a.(0) <- Array.of_list t.outer;
+  List.iteri (fun i h -> a.(i + 1) <- Array.of_list h) t.holes;
+  a
+
 let add_holes ?validate ~holes t =
   make ?validate ~holes:(List.rev_append t.holes holes) t.outer
 
@@ -150,7 +175,7 @@ let ring ?fn ?fa ?fs ~thickness radii =
        x thickness < x radii
        && y thickness < y radii
        && x thickness > 0.
-       && y thickness > 0.)
+       && y thickness > 0. )
   then
     make
       ~holes:[ List.rev @@ Path2.ellipse ?fn ?fa ?fs (V2.sub radii thickness) ]
@@ -162,7 +187,7 @@ let box ?center ~thickness dims =
        x thickness < x dims
        && y thickness < y dims
        && x thickness > 0.
-       && y thickness > 0.)
+       && y thickness > 0. )
   then (
     let holes = [ List.rev @@ Path2.square ?center (V2.sub dims thickness) ] in
     make ~holes (Path2.square ?center dims) )
@@ -194,3 +219,5 @@ let xscale x = map (Path2.xscale x)
 let yscale y = map (Path2.yscale y)
 let mirror ax = map (Path2.mirror ax)
 let affine m = map (Path2.affine m)
+let outer t = t.outer
+let holes t = t.holes

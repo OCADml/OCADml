@@ -3,6 +3,38 @@ module type S = sig
   type line
   type t = vec list
 
+  (** {1 Construction / Conversion} *)
+
+  (** [of_list l]
+
+      Construct a path from a list of points [l] (no-op). *)
+  val of_list : vec list -> t
+
+  (** [of_seq s]
+
+      Construct a path from a sequence of points [s]. *)
+  val of_seq : vec Seq.t -> t
+
+  (** [of_array a]
+
+      Construct a path from an array of points [a]. *)
+  val of_array : vec array -> t
+
+  (** [to_list t]
+
+      Convert the path [t] to a list of points (no-op). *)
+  val to_list : t -> vec list
+
+  (** [to_seq t]
+
+      Convert the path [t] to a sequence of points. *)
+  val to_seq : t -> vec Seq.t
+
+  (** [to_array t]
+
+      Convert the path [t] to a array of points. *)
+  val to_array : t -> vec array
+
   (** {1 General Path Utilities} *)
 
   (** [length ?closed path]
@@ -196,6 +228,13 @@ module Make (V : V.S) = struct
   type line = V.line
   type t = vec list
 
+  let of_list l = l
+  let of_seq s = List.of_seq s
+  let of_array a = Array.to_list a
+  let to_list t = t
+  let to_seq t = List.to_seq t
+  let to_array t = Array.of_list t
+
   let length' ?(closed = false) path =
     let len = Array.length path
     and p = Array.unsafe_get path in
@@ -297,61 +336,61 @@ module Make (V : V.S) = struct
           init
       and len = List.length path in
       ( match freq with
-      | `Refine (1, _) | `RoughRefine (1, _) -> path
-      | (`N (n, _) | `RoughN (n, _)) when len = n -> path
-      | `Spacing s when s <= 0. -> invalid_arg "Minumum spacing must be greater than 0."
-      | `Spacing s ->
-        let f (a, ps) b =
-          let n = Float.(to_int @@ ceil (V.distance a b /. s)) in
-          b, lerp ps a b n
-        in
-        let last, ps = List.fold_left f (hd, []) tl in
-        List.rev @@ if closed then snd @@ f (last, ps) hd else last :: ps
-      | freq ->
-        let exact, density_by, n =
-          match freq with
-          | `N (n, by) -> true, by, n
-          | `RoughN (n, by) -> false, by, n
-          | `Refine (factor, by) -> true, by, len * factor
-          | `RoughRefine (factor, by) -> false, by, len * factor
-          | _ -> failwith "`Spacing is unreachable."
-        in
-        if n < len
-        then
-          invalid_arg
-          @@ Printf.sprintf
-               "Target number of points (%i) must not be less than input length (%i)."
-               n
-               len;
-        let add_ns =
-          let seg_lens =
-            match density_by with
-            | `ByLen -> segment_lengths ~closed path
-            | `BySeg ->
-              let n_segs = len - if closed then 0 else 1 in
-              let l = length ~closed path /. Float.of_int n_segs in
-              List.init n_segs (Fun.const l)
+        | `Refine (1, _) | `RoughRefine (1, _) -> path
+        | (`N (n, _) | `RoughN (n, _)) when len = n -> path
+        | `Spacing s when s <= 0. -> invalid_arg "Minumum spacing must be greater than 0."
+        | `Spacing s ->
+          let f (a, ps) b =
+            let n = Float.(to_int @@ ceil (V.distance a b /. s)) in
+            b, lerp ps a b n
           in
-          let density = Float.of_int (n - len) /. List.fold_left ( +. ) 0. seg_lens in
-          if exact
-          then (
-            (* To obtain exact number of points / refinement, rounding error is
+          let last, ps = List.fold_left f (hd, []) tl in
+          List.rev @@ if closed then snd @@ f (last, ps) hd else last :: ps
+        | freq ->
+          let exact, density_by, n =
+            match freq with
+            | `N (n, by) -> true, by, n
+            | `RoughN (n, by) -> false, by, n
+            | `Refine (factor, by) -> true, by, len * factor
+            | `RoughRefine (factor, by) -> false, by, len * factor
+            | _ -> failwith "`Spacing is unreachable."
+          in
+          if n < len
+          then
+            invalid_arg
+            @@ Printf.sprintf
+                 "Target number of points (%i) must not be less than input length (%i)."
+                 n
+                 len;
+          let add_ns =
+            let seg_lens =
+              match density_by with
+              | `ByLen -> segment_lengths ~closed path
+              | `BySeg ->
+                let n_segs = len - if closed then 0 else 1 in
+                let l = length ~closed path /. Float.of_int n_segs in
+                List.init n_segs (Fun.const l)
+            in
+            let density = Float.of_int (n - len) /. List.fold_left ( +. ) 0. seg_lens in
+            if exact
+            then (
+              (* To obtain exact number of points / refinement, rounding error is
                     carried over between segments. Goal is to distribute the
                     error in a uniform manner. *)
-            let f (err, adds) seg_len =
-              let a = (seg_len *. density) -. err in
-              let a' = Float.round a in
-              a' -. a, Float.to_int a' :: adds
-            in
-            Util.array_of_list_rev @@ snd @@ List.fold_left f (0., []) seg_lens )
-          else
-            Util.array_of_list_map
-              (fun l -> Float.(to_int @@ round @@ (l *. density)))
-              seg_lens
-        in
-        let f ((i, a), ps) b = (i + 1, b), lerp ps a b (add_ns.(i) + 1) in
-        let last, ps = List.fold_left f ((0, hd), []) tl in
-        List.rev @@ if closed then snd @@ f (last, ps) hd else snd last :: ps )
+              let f (err, adds) seg_len =
+                let a = (seg_len *. density) -. err in
+                let a' = Float.round a in
+                a' -. a, Float.to_int a' :: adds
+              in
+              Util.array_of_list_rev @@ snd @@ List.fold_left f (0., []) seg_lens )
+            else
+              Util.array_of_list_map
+                (fun l -> Float.(to_int @@ round @@ (l *. density)))
+                seg_lens
+          in
+          let f ((i, a), ps) b = (i + 1, b), lerp ps a b (add_ns.(i) + 1) in
+          let last, ps = List.fold_left f ((0, hd), []) tl in
+          List.rev @@ if closed then snd @@ f (last, ps) hd else snd last :: ps )
 
   let cut ?(closed = false) ~distances = function
     | [] | [ _ ] -> invalid_arg "Path must have more than one point to be cut."
@@ -471,30 +510,30 @@ module Make (V : V.S) = struct
     List.rev @@ prune_collinear_rev' ?closed (Array.of_list path)
 
   let deduplicate_consecutive
-      ?(closed = false)
-      ?(keep = `First)
-      ?(eq = V.approx ~eps:Util.epsilon)
+    ?(closed = false)
+    ?(keep = `First)
+    ?(eq = V.approx ~eps:Util.epsilon)
     = function
     | [] -> []
     | [ a; b ] as l ->
       ( match eq a b, keep with
-      | true, `First -> [ a ]
-      | true, `Last -> [ b ]
-      | _ -> l )
+        | true, `First -> [ a ]
+        | true, `Last -> [ b ]
+        | _ -> l )
     | first :: rest ->
       let final last acc = if closed && eq first last then acc else last :: acc in
       let rec loop acc is_first last = function
         | [ hd ] ->
           ( match eq hd last, keep with
-          | true, `First -> final last acc
-          | true, (`Last | `LastAndEnds | `FirstAndEnds) -> final hd acc
-          | false, _ -> final hd (last :: acc) )
+            | true, `First -> final last acc
+            | true, (`Last | `LastAndEnds | `FirstAndEnds) -> final hd acc
+            | false, _ -> final hd (last :: acc) )
         | hd :: tl ->
           ( match eq hd last, is_first, keep with
-          | true, _, (`First | `FirstAndEnds) -> loop acc is_first last tl
-          | true, true, `LastAndEnds -> loop acc is_first last tl
-          | true, _, `Last | true, false, `LastAndEnds -> loop acc is_first hd tl
-          | false, _, _ -> loop (last :: acc) false hd tl )
+            | true, _, (`First | `FirstAndEnds) -> loop acc is_first last tl
+            | true, true, `LastAndEnds -> loop acc is_first last tl
+            | true, _, `Last | true, false, `LastAndEnds -> loop acc is_first hd tl
+            | false, _, _ -> loop (last :: acc) false hd tl )
         | [] -> failwith "unreachable"
       in
       List.rev (loop [] true first rest)
@@ -560,11 +599,11 @@ module Make (V : V.S) = struct
     |> List.map V.normalize
 
   let continuous_closest_point
-      ?(closed = false)
-      ?(n_steps = 15)
-      ?(max_err = 0.01)
-      path_f
-      p
+    ?(closed = false)
+    ?(n_steps = 15)
+    ?(max_err = 0.01)
+    path_f
+    p
     =
     let step = 1. /. Float.of_int n_steps in
     let wrap u = if u < 0. then 1. +. u else if u > 1. then u -. 1. else u in

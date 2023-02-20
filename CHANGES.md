@@ -1,8 +1,11 @@
-## v.0.4.0
+## v0.4.0
 
 - make cairo2 a depopt and break `PolyText` into optional sub-library
  (now free of non-OCaml dependencies)
 - fix bug in `Path2.point_inside` (always returning outside)
+- abstract `Poly{2,3}.t` (from private) free up for potential implementation change
+- add missing `{of,to}_{seq,list,array}` to `Path` and `Poly` modules for
+ convenience
 
 ## v0.3.2
 - add `of_list` and `to_list` convenience functions to `Poly2` and `Poly3`

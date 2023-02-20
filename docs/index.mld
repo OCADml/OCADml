@@ -37,6 +37,12 @@ that of 2D drawing and mesh generation via sweeping/extrusion.
 - {{!OCADml.BallTree2} [BallTree2]} -- 2d vector space partitioning search tree
 - {{!OCADml.BallTree3} [BallTree3]} -- 3d vector space partitioning search tree
 
+{1:toplevel Using OCaml top-level}
+
+As this library uses vector types from {{:https://erratique.ch/software/gg} Gg},
+the associated pretty printing functionality can be unlocked in the top-level
+via [#require "gg.top";;].
+
 {1:cad CAD Package Specific Frontends}
 
 This library only provides a means to generate point and face based geometries,

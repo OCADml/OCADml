@@ -23,10 +23,15 @@ exception InvalidPoly of invalid
     This type is kept private to force use of {!make}, which performs
     {!validation} by default, hopefully providing an early warning that the
     shape may have issues rendering in a CAD backend. *)
-type t = private
-  { outer : Path2.t (** outer perimeter *)
-  ; holes : Path2.t list (** inner paths to be subtracted from the outer shape *)
-  }
+type t
+
+(** {1 Accessors} *)
+
+(** [outer t] gets the outer path of [t] *)
+val outer : t -> Path2.t
+
+(** [holes t] gets the inner (hole) paths of [t] *)
+val holes : t -> Path2.t list
 
 (** {1 Creation and Validation} *)
 
@@ -49,12 +54,32 @@ val of_paths : ?validate:bool -> Path2.t list -> t
 
     Create a 2d polygon from a list of paths. Same as {!of_paths} with
     [~validate:false]. *)
-val of_list : Path2.t list -> t
+val of_list : V2.t list list -> t
 
 (** [to_list t]
 
     Convert the polygon [t] into a list with the [outer] path as the head. *)
-val to_list : t -> Path2.t list
+val to_list : t -> V2.t list list
+
+(** [of_seq s]
+
+     Construct a polygon from a sequence of sequences of points [s]. *)
+val of_seq : V2.t Seq.t Seq.t -> t
+
+(** [to_seq t]
+
+     Convert the polygon [t] to a sequence of sequences of points. *)
+val to_seq : t -> V2.t Seq.t Seq.t
+
+(** [of_array a]
+
+     Construct a polygon from an array of arrays of points [a]. *)
+val of_array : V2.t array array -> t
+
+(** [to_array t]
+
+     Convert the polygon [t] to an array of arrays of points. *)
+val to_array : t -> V2.t array array
 
 (** [add_holes ?validate ~holes t]
 
