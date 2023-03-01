@@ -114,8 +114,8 @@ val ztrans : float -> t
 
 (** [mirror ax]
 
-    Create an affine transformation matrix that applies a reflection across the
-    axis [ax]. *)
+    Create an affine transformation matrix that applies a reflection over the
+    plane decsribed by the normal vector [ax]. *)
 val mirror : V3.t -> t
 
 (** [xrot ?about r]

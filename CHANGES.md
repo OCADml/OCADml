@@ -1,3 +1,7 @@
+## v0.4.1
+
+- fix `V2.mirror` (xy were inverted) and clarify mirror doc comments
+
 ## v0.4.0
 
 - make cairo2 a depopt and break `PolyText` into optional sub-library
