@@ -97,7 +97,7 @@ val yscale : float -> t -> t
 
 (** [mirror ax t]
 
-    Mirrors [t] on a plane through the origin, defined by the normal vector [ax]. *)
+    Mirrors [t] across an axis through the origin, defined by the vector [ax]. *)
 val mirror : t -> t -> t
 
 (** {1 2d - 3d conversion} *)

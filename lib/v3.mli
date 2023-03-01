@@ -90,7 +90,7 @@ val zscale : float -> t -> t
 
 (** [mirror ax t]
 
-    Mirrors [t] on a plane through the origin, defined by the normal vector
+    Mirrors [t] over a plane through the origin, defined by the normal vector
     [ax]. *)
 val mirror : t -> t -> t
 

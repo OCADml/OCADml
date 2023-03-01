@@ -65,8 +65,8 @@ let lerp a b u =
 let lerpn ?(endpoint = true) a b n =
   let d = Float.of_int @@ if endpoint then Int.max 1 (n - 1) else n in
   List.init n (fun i ->
-      let u = Float.of_int i /. d in
-      lerp a b u )
+    let u = Float.of_int i /. d in
+    lerp a b u )
 
 let angle a b = Float.acos (Math.clamp ~min:(-1.) ~max:1. (dot a b /. (norm a *. norm b)))
 let ccw_theta t = Float.atan2 (y t) (x t)
@@ -123,11 +123,11 @@ let point_on_line ?(eps = Util.epsilon) ?bounds ~line t =
   distance_to_line ?bounds ~line t < eps
 
 let line_intersection
-    ?(eps = Util.epsilon)
-    ?(bounds1 = false, false)
-    ?(bounds2 = false, false)
-    l1
-    l2
+  ?(eps = Util.epsilon)
+  ?(bounds1 = false, false)
+  ?(bounds2 = false, false)
+  l1
+  l2
   =
   let d1 = sub l1.a l1.b
   and d2 = sub l2.a l2.b in
@@ -190,4 +190,4 @@ let[@inline] zrot ?about theta t = rotate ?about theta t
 let[@inline] scale a b = mul a b
 let[@inline] xscale s t = v (x t *. s) (y t)
 let[@inline] yscale s t = v (x t) (y t *. s)
-let mirror ax t = sub t (smul ax (2. *. (dot t ax /. dot ax ax)))
+let mirror ax t = sub (smul ax (2. *. (dot t ax /. dot ax ax))) t
