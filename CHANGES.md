@@ -1,6 +1,7 @@
 ## v0.4.1
 
 - fix `V2.mirror` (xy were inverted) and clarify mirror doc comments
+- preserve path/poly winding when mirrored
 
 ## v0.4.0
 
