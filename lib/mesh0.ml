@@ -562,7 +562,7 @@ let scale s t = { t with points = Path3.scale s t.points }
 let xscale x t = { t with points = Path3.xscale x t.points }
 let yscale y t = { t with points = Path3.yscale y t.points }
 let zscale z t = { t with points = Path3.zscale z t.points }
-let mirror ax t = rev_faces { t with points = Path3.mirror ax t.points }
+let mirror ax t = rev_faces { t with points = List.map (V3.mirror ax) t.points }
 
 let to_binstl ~rev path t =
   let pts =

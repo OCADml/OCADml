@@ -161,18 +161,18 @@ let to_transforms ?(mode = `Auto) ?scale_ez ?twist_ez ?scale ?twist path =
   List.init len f
 
 let helical_transforms
-    ?fn
-    ?fa
-    ?fs
-    ?scale_ez
-    ?twist_ez
-    ?scale
-    ?twist
-    ?(left = true)
-    ~n_turns
-    ~pitch
-    ?r2
-    r1
+  ?fn
+  ?fa
+  ?fs
+  ?scale_ez
+  ?twist_ez
+  ?scale
+  ?twist
+  ?(left = true)
+  ~n_turns
+  ~pitch
+  ?r2
+  r1
   =
   let r2 = Option.value ~default:r1 r2 in
   let n_frags = Util.helical_fragments ?fn ?fa ?fs (Float.max r1 r2) in
@@ -202,7 +202,7 @@ let helical_transforms
     Affine3.(
       scaler (rel_pos i)
       %> twister (rel_pos i)
-      %> Quaternion.(to_affine ~trans (of_euler eul)))
+      %> Quaternion.(to_affine ~trans (of_euler eul)) )
   in
   List.mapi f path
 
@@ -283,7 +283,7 @@ let scale s = List.map (V3.scale s)
 let xscale x = List.map (V3.xscale x)
 let yscale y = List.map (V3.yscale y)
 let zscale z = List.map (V3.zscale z)
-let mirror ax = List.map (V3.mirror ax)
+let mirror ax = List.rev_map (V3.mirror ax)
 
 let prune_transforms ?(min_dist = 0.05) ~shape = function
   | [] -> []
