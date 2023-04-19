@@ -15,8 +15,9 @@ depends: [
   "gg" {>= "1.0.0"}
   "odoc" {with-doc}
 ]
-depopts: [
-  "cairo2" {>= "0.6.2"}
+depopts: ["cairo2"]
+conflicts: [
+  "cairo2" {< "0.6.2"}
 ]
 build: [
   ["dune" "subst"] {dev}

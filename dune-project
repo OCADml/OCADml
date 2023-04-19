@@ -27,6 +27,7 @@
   dune
   (gg
    (>= 1.0.0)))
- (depopts
+ (depopts cairo2)
+ (conflicts
   (cairo2
-   (>= 0.6.2))))
+   (< 0.6.2))))
