@@ -30,7 +30,7 @@ that of 2D drawing and mesh generation via sweeping/extrusion.
 - {{!OCADml.Path3} [Path3]} -- generation and manipulation of 3d paths
 - {{!OCADml.Bezier3} [Bezier3]} -- 3d bezier curves, patches, and splines
 - {{!OCADml.Poly3} [Poly3]} -- planar 3d polygons (outer, and zero or more inner paths)
-- {{!OCADml.Mesh} [Mesh]} -- points and faces 3d mesh representation (polyhedrons)
+- {{!OCADml.Mesh} [Mesh]} -- triangular mesh generation
 
 {2 Utilities}
 - {{!OCADml.Math} [Math]} -- float and 2d matrix operations

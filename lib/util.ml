@@ -115,6 +115,14 @@ let map_inplace f a =
     a.(i) <- f a.(i)
   done
 
+let rev_map_array f a =
+  let sz = Array.length a in
+  let b = Array.make sz (f a.(0)) in
+  for i = 1 to sz - 1 do
+    b.(sz - i - 1) <- f a.(i)
+  done;
+  b
+
 let flatten_array m =
   let size = Array.fold_left (fun s r -> s + Array.length r) 0 m in
   if size > 0
@@ -199,8 +207,8 @@ let helical_slices ?fn ?(fa = fa) twist =
   let twist = Float.abs twist in
   let min_slices = Int.max 1 Float.(twist /. (pi /. 3.) |> ceil |> to_int) in
   ( match fn with
-  | Some n -> Float.(Float.of_int n *. twist /. (2. *. pi) |> ceil |> to_int)
-  | None -> Float.(to_int @@ ceil (twist /. fa)) )
+    | Some n -> Float.(Float.of_int n *. twist /. (2. *. pi) |> ceil |> to_int)
+    | None -> Float.(to_int @@ ceil (twist /. fa)) )
   |> Int.max min_slices
 
 let helical_fragments ?fn ?(fa = fa) ?(fs = fs) radius =
@@ -222,3 +230,7 @@ let getter ~len ~name = function
            (Array.length a)
            len;
     Array.get a
+
+let rev_tri (a, b, c) = c, b, a
+let offset_tri n (a, b, c) = a + n, b + n, c + n
+let offset_tri_rev n (a, b, c) = c + n, b + n, a + n

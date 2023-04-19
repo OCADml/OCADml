@@ -1,3 +1,10 @@
+## v0.5.0
+
+- `Mesh.t` implentation changed from polygonal to triangular
+- replace `Mesh.triangulate` with `of_polyhedron`
+- add `Mesh.e` accessor to get points by index (points now stored as array)
+- add `?no_check` to `Path3.to_plane` to avoid coplanarity check (defaults to `false`)
+
 ## v0.4.1
 
 - fix `V2.mirror` (xy were inverted) and clarify mirror doc comments

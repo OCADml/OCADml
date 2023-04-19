@@ -269,7 +269,7 @@ val hull : ?all:bool -> t -> t
 
     Break the polygon [t] into a list of triangles. If provided, [eps] is used
     for duplicate point and collinearity checks. *)
-val triangulate : ?eps:float -> t -> t list
+val triangulate : ?eps:float -> t -> V2.t list list
 
 (** {1 Path Matching / Vertex Association}
 

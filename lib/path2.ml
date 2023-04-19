@@ -211,4 +211,5 @@ let hull ?(all = false) ps =
 
 let triangulate ?eps poly =
   let poly = Array.of_list poly in
-  Triangulate.triangulate ?eps poly |> List.map (List.map (fun i -> poly.(i)))
+  Triangulate.triangulate ?eps poly
+  |> List.map (fun (a, b, c) -> [ poly.(a); poly.(b); poly.(c) ])

@@ -30,14 +30,14 @@ let none_inside ?eps poly idxs p0 p1 p2 =
                 (* vert is a cw reflex poly vertex inside the triangle  *)
                 clockwise_sign ?eps p0 p1 vert > 0.
                 && clockwise_sign ?eps p1 p2 vert > 0.
-                && clockwise_sign ?eps p2 p0 vert >= 0.)
-            || V2.(
-                 (* vert = p1 and some of its adjacent edges cross the open segment *)
-                 approx ?eps vert p1
-                 && left_of_line ?eps ~line:{ a = prev; b = p1 } p0 <= 0.
-                 && left_of_line ?eps ~line:{ a = p1; b = prev } p2 <= 0.
-                 && left_of_line ?eps ~line:{ a = p1; b = next } p2 <= 0.
-                 && left_of_line ?eps ~line:{ a = next; b = p1 } p0 <= 0.) )
+                && clockwise_sign ?eps p2 p0 vert >= 0. )
+              || V2.(
+                   (* vert = p1 and some of its adjacent edges cross the open segment *)
+                   approx ?eps vert p1
+                   && left_of_line ?eps ~line:{ a = prev; b = p1 } p0 <= 0.
+                   && left_of_line ?eps ~line:{ a = p1; b = prev } p2 <= 0.
+                   && left_of_line ?eps ~line:{ a = p1; b = next } p2 <= 0.
+                   && left_of_line ?eps ~line:{ a = next; b = p1 } p0 <= 0. ) )
       then false
       else loop (i + 1) )
   in
@@ -69,14 +69,19 @@ let get_ear ?eps poly idxs =
     in
     loop 0 )
 
-let triangulate' ?eps poly idxs =
+let triangulate' ?(rev = false) ?eps poly idxs =
+  let tri =
+    if rev
+    then fun idxs a b c -> idxs.(c), idxs.(b), idxs.(a)
+    else fun idxs a b c -> idxs.(a), idxs.(b), idxs.(c)
+  in
   let rec loop tris idxs =
     let len_idxs = Array.length idxs in
     if len_idxs = 3
     then
       if degenerate_tri ?eps poly.(idxs.(0)) poly.(idxs.(1)) poly.(idxs.(2))
       then tris
-      else [ idxs.(0); idxs.(1); idxs.(2) ] :: tris
+      else tri idxs 0 1 2 :: tris
     else (
       match get_ear ?eps poly idxs with
       | None ->
@@ -86,13 +91,14 @@ let triangulate' ?eps poly idxs =
         (* discard if degenerate and move on *)
         if len_idxs <= 4 then tris else loop tris (wrap_sub idxs (ear + 3) (len_idxs - 2))
       | Some (`Ear ear) ->
-        let tri = List.init 3 (fun i -> idxs.(ear + (i mod len_idxs)))
+        let tri =
+          tri idxs (ear mod len_idxs) ((ear + 1) mod len_idxs) ((ear + 2) mod len_idxs)
         and idxs = wrap_sub idxs (ear + 2) (len_idxs - 1) in
         loop (tri :: tris) idxs )
   in
   loop [] idxs
 
-let triangulate ?eps ?idxs poly =
+let triangulate ?(rev = false) ?eps ?idxs poly =
   let len_poly = Array.length poly in
   let idxs, len_idxs =
     match idxs with
@@ -116,9 +122,9 @@ let triangulate ?eps ?idxs poly =
     else (
       if V2.collinear poly.(idxs.(0)) poly.(idxs.(1)) poly.(idxs.(2))
       then invalid_arg "Triangulation cannot be performed on a collinear triplet.";
-      [ Array.to_list idxs ] )
+      if rev then [ idxs.(2), idxs.(1), idxs.(0) ] else [ idxs.(0), idxs.(1), idxs.(2) ] )
   else if APath2.is_clockwise (Array.init len_idxs (fun i -> poly.(idxs.(i))))
-  then triangulate' ?eps poly idxs
+  then triangulate' ~rev ?eps poly idxs
   else
-    triangulate' ?eps poly (Array.init len_idxs (fun i -> idxs.(len_idxs - 1 - i)))
-    |> List.map List.rev
+    triangulate' ~rev ?eps poly (Array.init len_idxs (fun i -> idxs.(len_idxs - 1 - i)))
+    |> List.map Util.rev_tri

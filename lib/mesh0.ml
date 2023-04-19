@@ -7,10 +7,11 @@ end)
 
 module IntSet = Set.Make (Int)
 
+type tri = int * int * int
+
 type t =
-  { size : int
-  ; points : V3.t list
-  ; faces : int list list
+  { points : V3.t array
+  ; faces : tri list
   }
 
 type endcaps =
@@ -30,11 +31,27 @@ type style =
   | `Concave
   ]
 
-let empty = { size = 0; points = []; faces = [] }
-let size t = t.size
-let points t = t.points
+let empty = { points = [||]; faces = [] }
+let size t = Array.length t.points
+let points t = Array.to_list t.points
+let e t i = t.points.(i)
 let faces t = t.faces
-let make ~points ~faces = { size = List.length points; points; faces }
+let make ~points ~faces = { points = Array.of_list points; faces }
+
+let of_polyhedron ?eps points faces =
+  let pts = Array.of_list points in
+  let f faces = function
+    | [ a; b; c ] -> (a, b, c) :: faces
+    | face ->
+      let face = Array.of_list face in
+      let poly = Array.init (Array.length face) (fun i -> pts.(face.(i))) in
+      let norm = APath3.normal poly in
+      let proj = Plane.(project (of_normal ~point:pts.(face.(0)) norm)) in
+      Triangulate.triangulate ?eps (Array.map proj poly)
+      |> List.map (fun (a, b, c) -> face.(a), face.(b), face.(c))
+      |> Fun.flip List.rev_append faces
+  in
+  { points = pts; faces = List.fold_left f [] faces }
 
 let prune_rows ?(min_dist = 0.05) = function
   | [] -> [], []
@@ -79,7 +96,7 @@ let of_rows
       and i4 = (r mod n_layers * n_facets) + ((c + 1) mod n_facets) in
       i1, i2, i3, i4
     in
-    let points =
+    let ps =
       let points = List.concat layers in
       match style with
       | `Quincunx ->
@@ -93,18 +110,25 @@ let of_rows
           then if r = n_rows - 1 then acc else loop acc (r + 1) 0
           else loop acc r (c + 1)
         in
-        List.append points (List.rev @@ loop [] 0 0)
-      | _ -> points
+        let qps = List.rev @@ loop [] 0 0
+        and sz = n_layers * n_facets in
+        let a = Array.make (sz + List.length qps) V3.zero in
+        List.iteri (fun i p -> a.(i) <- p) points;
+        List.iteri (fun i p -> a.(sz + i) <- p) qps;
+        a
+      | _ ->
+        let a = Array.make (n_layers * n_facets) V3.zero in
+        List.iteri (fun i p -> a.(i) <- p) points;
+        a
     in
     let faces =
-      let ps = Array.of_list points in
       let add_face a b c acc =
         (* drop degenerate faces *)
         if V3.(
              distance ps.(a) ps.(b) > Util.epsilon
              && distance ps.(b) ps.(c) > Util.epsilon
              && distance ps.(c) ps.(a) > Util.epsilon )
-        then if rev then [ c; b; a ] :: acc else [ a; b; c ] :: acc
+        then if rev then (c, b, a) :: acc else (a, b, c) :: acc
         else acc
       in
       let add_faces default acc i1 i2 i3 i4 =
@@ -160,20 +184,26 @@ let of_rows
         else loop acc seg (face + 1)
       in
       let faces = loop [] 0 0
-      and bottom_cap =
-        List.init n_facets (if rev then Fun.id else fun i -> n_facets - 1 - i)
-      and top_cap =
-        let offset = n_facets * (n_layers - 1) in
-        let f = if rev then fun i -> offset + n_facets - 1 - i else ( + ) offset in
-        List.init n_facets f
+      and bottom_cap () =
+        let bot = List.hd layers in
+        let proj = Plane.project (Path3.to_plane ~no_check:true bot) in
+        let a = Util.array_of_list_map proj bot in
+        Triangulate.triangulate ~rev:(not rev) a
+      and top_cap () =
+        let offset = n_facets * (n_layers - 1)
+        and top = List.nth layers (n_layers - 1) in
+        let proj = Plane.project (Path3.to_plane ~no_check:true top) in
+        let a = Util.array_of_list_map proj top in
+        let f = if rev then Util.offset_tri_rev else Util.offset_tri in
+        List.map (f offset) (Triangulate.triangulate a)
       in
       match endcaps with
-      | `Both -> top_cap :: bottom_cap :: faces
+      | `Both -> List.concat [ top_cap (); bottom_cap (); faces ]
       | `None | `Loop -> faces
-      | `Top -> top_cap :: faces
-      | `Bot -> bottom_cap :: faces
+      | `Top -> List.rev_append (top_cap ()) faces
+      | `Bot -> List.rev_append (bottom_cap ()) faces
     in
-    { size = n_layers * n_facets; points; faces }
+    { points = ps; faces }
 
 let of_ragged ?(looped = false) ?(rev = false) rows =
   let starts_lenghts, points =
@@ -192,27 +222,27 @@ let of_ragged ?(looped = false) ?(rev = false) rows =
       let faces =
         match next_len - len with
         | 0 ->
-          let a i = [ i + start; i + start + 1; i + next_start ]
-          and b i = [ i + start + 1; i + next_start + 1; i + next_start ] in
+          let a i = i + start, i + start + 1, i + next_start
+          and b i = i + start + 1, i + next_start + 1, i + next_start in
           Util.prepend_init (len - 1) a faces |> Util.prepend_init (len - 1) b
         | 1 ->
-          let a i = [ i + start; i + start + 1; i + next_start + 1 ]
-          and b i = [ i + start; i + next_start + 1; i + next_start ] in
+          let a i = i + start, i + start + 1, i + next_start + 1
+          and b i = i + start, i + next_start + 1, i + next_start in
           Util.prepend_init (len - 1) a faces |> Util.prepend_init len b
         | -1 ->
-          let a i = [ i + start + 1; i + next_start + 1; i + next_start ]
-          and b i = [ i + start; i + start + 1; i + next_start ] in
+          let a i = i + start + 1, i + next_start + 1, i + next_start
+          and b i = i + start, i + start + 1, i + next_start in
           Util.prepend_init (len - 2) a faces |> Util.prepend_init (len - 1) b
         | 2 ->
           let count = Float.(to_int @@ floor @@ ((of_int len -. 1.) /. 2.)) in
-          let a i = [ i + start; i + start + 1; i + next_start + 1 ]
+          let a i = i + start, i + start + 1, i + next_start + 1
           and b i =
             let i = i + count in
-            [ i + start; i + start + 1; i + next_start + 2 ]
-          and c i = [ i + start; i + next_start + 1; i + next_start ]
+            i + start, i + start + 1, i + next_start + 2
+          and c i = i + start, i + next_start + 1, i + next_start
           and d i =
             let i = i + count + 1 in
-            [ i + start - 1; i + next_start + 1; i + next_start ]
+            i + start - 1, i + next_start + 1, i + next_start
           in
           Util.prepend_init count a faces
           |> Util.prepend_init (len - count - 1) b
@@ -220,14 +250,14 @@ let of_ragged ?(looped = false) ?(rev = false) rows =
           |> Util.prepend_init (next_len - 2 - count) d
         | -2 ->
           let count = Float.(to_int @@ floor @@ ((of_int len -. 1.) /. 2.)) in
-          let a i = [ i + next_start; i + start + 1; i + next_start + 1 ]
+          let a i = i + next_start, i + start + 1, i + next_start + 1
           and b i =
             let i = i + count - 1 in
-            [ i + next_start; i + start + 2; i + next_start + 1 ]
-          and c i = [ i + next_start; i + start; i + start + 1 ]
+            i + next_start, i + start + 2, i + next_start + 1
+          and c i = i + next_start, i + start, i + start + 1
           and d i =
             let i = i + count in
-            [ i + next_start - 1; i + start; i + start + 1 ]
+            i + next_start - 1, i + start, i + start + 1
           in
           Util.prepend_init (count - 1) a faces
           |> Util.prepend_init (len - count - 2) b
@@ -245,38 +275,31 @@ let of_ragged ?(looped = false) ?(rev = false) rows =
       let cull_degenerate =
         let v = Array.unsafe_get verts in
         let not_degen a b = Float.compare (V3.distance (v a) (v b)) Util.epsilon = 1 in
-        function
-        | [ i0; i1; i2 ] as face ->
+        fun ((i0, i1, i2) as face) ->
           if not_degen i0 i1 && not_degen i1 i2 && not_degen i2 i0
-          then if rev then Some [ i2; i1; i0 ] else Some face
+          then if rev then Some (i2, i1, i0) else Some face
           else None
-        | _ -> failwith "unreachable"
       in
       List.filter_map cull_degenerate all_faces
     in
-    { size = Array.length verts; points; faces }
+    { points = verts; faces }
 
-let of_path2 ?(rev = false) layer =
-  let size, points, face =
-    List.fold_left
-      (fun (n, ps, fs) p -> n + 1, V3.of_v2 p :: ps, n :: fs)
-      (0, [], [])
-      layer
-  in
-  { size; points; faces = [ (if rev then List.rev face else face) ] }
+let of_path2 ?rev layer =
+  let ps = Array.of_list layer in
+  let faces = Triangulate.triangulate ?rev ps in
+  { points = Array.map V3.of_v2 ps; faces }
 
-let of_path3 ?(rev = false) layer =
-  let size, points, face =
-    List.fold_left (fun (n, ps, fs) p -> n + 1, p :: ps, n :: fs) (0, [], []) layer
-  in
-  { size; points; faces = [ (if rev then List.rev face else face) ] }
+let of_path3 ?rev layer =
+  let points = Array.of_list layer in
+  let faces = Triangulate.triangulate ?rev (Array.map V2.of_v3 points) in
+  { points; faces }
 
 let of_poly2 ?rev p2 =
   match Poly2.holes p2 with
   | [] -> of_path2 ?rev (Poly2.outer p2)
   | holes ->
     let points, faces = PolyHoles.partition ?rev ~holes (Poly2.outer p2) in
-    make ~points ~faces
+    { points; faces }
 
 let of_poly3 ?rev = function
   | Poly3.{ outer; holes = [] } -> of_path3 ?rev outer
@@ -286,7 +309,7 @@ let of_poly3 ?rev = function
     and lift = Plane.lift plane in
     let holes = List.map project holes in
     let points, faces = PolyHoles.partition ?rev ~lift ~holes (project outer) in
-    make ~points ~faces
+    { points; faces }
 
 let of_polygons polys =
   let lengths = Util.array_of_list_map List.length polys in
@@ -298,23 +321,23 @@ let of_polygons polys =
     done;
     a
   in
-  let faces = List.init n (fun i -> List.init lengths.(i) (fun j -> j + offsets.(i))) in
-  { size = offsets.(n); points = List.concat polys; faces }
+  let faces = List.init n (fun i -> List.init lengths.(i) (fun j -> j + offsets.(i)))
+  and points = List.concat polys in
+  of_polyhedron points faces
 
 let join = function
   | [] -> empty
   | [ t ] -> t
-  | { size; points; faces } :: ts ->
+  | { points; faces } :: ts ->
     let f (n, ps, fs) t =
-      let offset = List.map (List.map (( + ) n)) t.faces in
-      n + t.size, t.points :: ps, offset :: fs
+      let offset = List.map (Util.offset_tri n) t.faces in
+      n + Array.length t.points, t.points :: ps, offset :: fs
     in
-    let size, ps, fs = List.fold_left f (size, [ points ], [ faces ]) ts in
-    { size; points = List.concat (List.rev ps); faces = List.concat (List.rev fs) }
+    let _, ps, fs = List.fold_left f (Array.length points, [ points ], [ faces ]) ts in
+    { points = Array.concat (List.rev ps); faces = List.concat (List.rev fs) }
 
-let merge_points ?(eps = Util.epsilon) { size; points; faces } =
-  let drop = IntTbl.create 100
-  and pts = Array.of_list points in
+let merge_points ?(eps = Util.epsilon) { points = pts; faces } =
+  let drop = IntTbl.create 100 in
   let len = Array.length pts in
   let () =
     (* naive search if the mesh is small (avoid building search tree) *)
@@ -339,7 +362,7 @@ let merge_points ?(eps = Util.epsilon) { size; points; faces } =
   let points =
     let f (i, acc) p = if IntTbl.mem drop i then i + 1, acc else i + 1, p :: acc in
     let _, points = Array.fold_left f (0, []) pts in
-    List.rev points
+    Util.array_of_list_rev points
   and faces =
     let lookup = Array.make len 0
     and off = ref 0
@@ -352,37 +375,23 @@ let merge_points ?(eps = Util.epsilon) { size; points; faces } =
         incr off
       | None -> lookup.(i) <- i - !off
     done;
-    let rec prune_face i first last acc = function
-      | [ hd ] ->
-        let hd' = lookup.(hd) in
-        if hd' <> last && hd' <> first && i >= 2
-        then Some (List.rev @@ (hd' :: acc))
-        else if i >= 3
-        then Some (List.rev acc)
-        else None
-      | hd :: tl ->
-        let hd' = lookup.(hd) in
-        if hd' <> last
-        then prune_face (i + 1) first hd' (hd' :: acc) tl
-        else prune_face i first last acc tl
-      | [] -> None
+    let prune_degen acc (a, b, c) =
+      let a = lookup.(a)
+      and b = lookup.(b)
+      and c = lookup.(c) in
+      if a = b || b = c || c = a then acc else (a, b, c) :: acc
     in
-    let f acc = function
-      | [] -> acc
-      | hd :: tl ->
-        let hd' = lookup.(hd) in
-        Util.prepend_opt (prune_face 1 hd' hd' [ hd' ] tl) acc
-    in
-    List.fold_left f [] faces
+    List.fold_left prune_degen [] faces
   in
-  { size = size - IntTbl.length drop; points; faces }
+  { points; faces }
 
-let drop_unused_points { size; points; faces } =
+let drop_unused_points { points; faces } =
+  let size = Array.length points in
   let keep = Array.make size false
   and remap = Array.make size 0
   and count = ref 0 in
   let () =
-    let add_face s face = List.fold_left (fun s i -> IntSet.add i s) s face in
+    let add_face s (a, b, c) = IntSet.add a s |> IntSet.add b |> IntSet.add c in
     let set = List.fold_left add_face IntSet.empty faces in
     for i = 0 to size - 1 do
       if IntSet.mem i set
@@ -393,80 +402,49 @@ let drop_unused_points { size; points; faces } =
       end
     done
   in
-  let points = List.filteri (fun i _ -> keep.(i)) points
-  and faces = List.map (List.map (fun i -> remap.(i))) faces in
-  { size = !count; points; faces }
+  let points =
+    let a = Array.make !count V3.zero
+    and idx = ref 0 in
+    for i = 0 to size - 1 do
+      if keep.(i)
+      then (
+        a.(!idx) <- points.(i);
+        incr idx )
+    done;
+    a
+  and faces = List.map (fun (a, b, c) -> remap.(a), remap.(b), remap.(c)) faces in
+  { points; faces }
 
-let rev_faces t = { t with faces = List.map List.rev t.faces }
+let rev_faces t = { t with faces = List.map Util.rev_tri t.faces }
 
-let triangulate ?eps { size; points; faces } =
-  let pts = Array.of_list points in
-  let f faces = function
-    | [ _; _; _ ] as face -> face :: faces
-    | face ->
-      let face = Array.of_list face in
-      let poly = Array.init (Array.length face) (fun i -> pts.(face.(i))) in
-      let norm = APath3.normal poly in
-      let proj = Plane.(project (of_normal ~point:pts.(face.(0)) norm)) in
-      Triangulate.triangulate ?eps (Array.map proj poly)
-      |> List.map (List.map (fun i -> face.(i)))
-      |> Fun.flip List.rev_append faces
-  in
-  { size; points; faces = List.fold_left f [] faces }
-
-let volume { size; points; faces } =
-  if size = 0
+let volume { points = pts; faces } =
+  if Array.length pts = 0
   then 0.
   else (
-    let pts = Array.of_list points in
-    let rec sum_face total_vol p1 idxs =
-      let calc total_vol p1 p2 p3 = V3.(dot (cross p3 p2) p1) +. total_vol in
-      match idxs with
-      | [ i2; i3 ] -> calc total_vol p1 pts.(i2) pts.(i3)
-      | i2 :: (i3 :: _ as rest) -> sum_face (calc total_vol p1 pts.(i2) pts.(i3)) p1 rest
-      | _ -> invalid_arg "Polyhedron contains face with fewer than 3 points."
+    let sum_face total_vol (i1, i2, i3) =
+      V3.(dot (cross pts.(i3) pts.(i2)) pts.(i1)) +. total_vol
     in
-    let f total_vol = function
-      | i1 :: idxs -> sum_face total_vol pts.(i1) idxs
-      | [] -> invalid_arg "Polyhedron contains empty face."
-    in
-    List.fold_left f 0. faces /. 6. )
+    List.fold_left sum_face 0. faces /. 6. )
 
-let area { size; points; faces } =
-  if size = 0
+let area { points = pts; faces } =
+  if Array.length pts = 0
   then 0.
   else (
-    let pts = Array.of_list points in
-    let f sum idxs =
-      let face = List.map (fun i -> pts.(i)) idxs in
+    let f sum (a, b, c) =
+      let face = [ pts.(a); pts.(b); pts.(c) ] in
       let poly = Path3.(project (to_plane face) face) in
       sum +. Poly2.(area @@ make poly)
     in
     List.fold_left f 0. faces )
 
-let centroid ?(eps = Util.epsilon) { size; points; faces } =
-  if size = 0 then invalid_arg "No centroid for empty polyhedron.";
-  let pts = Array.of_list points in
-  let rec sum_face total_vol weighted_sum p1 idxs =
-    let calc total_vol weighted_sum p1 p2 p3 =
-      let vol = V3.(dot (cross p3 p2) p1) in
-      let weighted = V3.(smul (add p1 (add p2 p3)) vol) in
-      vol +. total_vol, V3.add weighted_sum weighted
-    in
-    match idxs with
-    | [ i2; i3 ] -> calc total_vol weighted_sum p1 pts.(i2) pts.(i3)
-    | i2 :: (i3 :: _ as rest) ->
-      let total_vol, weighted_sum = calc total_vol weighted_sum p1 pts.(i2) pts.(i3) in
-      sum_face total_vol weighted_sum p1 rest
-    | _ -> invalid_arg "Polyhedron contains face with fewer than 3 points."
+let centroid ?(eps = Util.epsilon) { points = pts; faces } =
+  if Array.length pts = 0 then invalid_arg "No centroid for empty polyhedron.";
+  let sum_face (total_vol, weighted_sum) (i1, i2, i3) =
+    let vol = V3.(dot (cross pts.(i3) pts.(i2)) pts.(i1)) in
+    let weighted = V3.(smul (add pts.(i1) (add pts.(i2) pts.(i3))) vol) in
+    vol +. total_vol, V3.add weighted_sum weighted
   in
-  let total_vol, weighted_sum =
-    let f (total_vol, weighted_sum) = function
-      | i1 :: idxs -> sum_face total_vol weighted_sum pts.(i1) idxs
-      | [] -> invalid_arg "Polyhedron contains empty face."
-    in
-    List.fold_left f (0., V3.zero) faces
-  in
+  let total_vol, weighted_sum = List.fold_left sum_face (0., V3.zero) faces in
   if Math.approx ~eps total_vol 0.
   then invalid_arg "The polyhedron has self-intersections.";
   V3.(sdiv weighted_sum (total_vol *. 4.))
@@ -515,9 +493,9 @@ let hull = function
       | Some d ->
         let ps = Array.of_list points in
         let add_tri a b c ((triangles, planes) as acc) =
-          try [ a; b; c ] :: triangles, Plane.make ps.(a) ps.(b) ps.(c) :: planes with
+          try (a, b, c) :: triangles, Plane.make ps.(a) ps.(b) ps.(c) :: planes with
           | Invalid_argument _ -> acc (* invalid triangle (points are collinear) *)
-        and[@warning "-partial-match"] add_edges edges [ a; b; c ] =
+        and[@warning "-partial-match"] add_edges edges (a, b, c) =
           EdgeSet.add (c, a) edges |> EdgeSet.add (b, c) |> EdgeSet.add (a, b)
         and b, c = if Plane.is_point_above plane ps.(d) then c, b else b, c in
         let triangles, planes =
@@ -545,31 +523,27 @@ let hull = function
           else acc
         in
         let faces, _ = Util.fold_init (Array.length ps) f (triangles, planes) in
-        { size = Array.length ps; faces; points } )
+        { points = ps; faces } )
 
-let translate p t = { t with points = Path3.translate p t.points }
-let xtrans x t = { t with points = Path3.xtrans x t.points }
-let ytrans y t = { t with points = Path3.ytrans y t.points }
-let ztrans z t = { t with points = Path3.ztrans z t.points }
-let rotate ?about r t = { t with points = Path3.rotate ?about r t.points }
-let xrot ?about r t = { t with points = Path3.xrot ?about r t.points }
-let yrot ?about r t = { t with points = Path3.yrot ?about r t.points }
-let zrot ?about r t = { t with points = Path3.zrot ?about r t.points }
-let quaternion ?about q t = { t with points = Path3.quaternion ?about q t.points }
+let translate p t = { t with points = APath3.translate p t.points }
+let xtrans x t = { t with points = APath3.xtrans x t.points }
+let ytrans y t = { t with points = APath3.ytrans y t.points }
+let ztrans z t = { t with points = APath3.ztrans z t.points }
+let rotate ?about r t = { t with points = APath3.rotate ?about r t.points }
+let xrot ?about r t = { t with points = APath3.xrot ?about r t.points }
+let yrot ?about r t = { t with points = APath3.yrot ?about r t.points }
+let zrot ?about r t = { t with points = APath3.zrot ?about r t.points }
+let quaternion ?about q t = { t with points = APath3.quaternion ?about q t.points }
 let axis_rotate ?about ax r = quaternion ?about (Quaternion.make ax r)
-let affine m t = { t with points = Path3.affine m t.points }
-let scale s t = { t with points = Path3.scale s t.points }
-let xscale x t = { t with points = Path3.xscale x t.points }
-let yscale y t = { t with points = Path3.yscale y t.points }
-let zscale z t = { t with points = Path3.zscale z t.points }
-let mirror ax t = rev_faces { t with points = List.map (V3.mirror ax) t.points }
+let affine m t = { t with points = APath3.affine m t.points }
+let scale s t = { t with points = APath3.scale s t.points }
+let xscale x t = { t with points = APath3.xscale x t.points }
+let yscale y t = { t with points = APath3.yscale y t.points }
+let zscale z t = { t with points = APath3.zscale z t.points }
+let mirror ax t = rev_faces { t with points = Array.map (V3.mirror ax) t.points }
 
-let to_binstl ~rev path t =
-  let pts =
-    let a = Array.make t.size (List.hd t.points) in
-    List.iteri (fun i p -> a.(i) <- p) t.points;
-    a
-  and write_unsigned_long oc n =
+let to_binstl ~rev path { points = pts; faces } =
+  let write_unsigned_long oc n =
     Out_channel.output_byte oc ((n lsr 0) land 0xFF);
     Out_channel.output_byte oc ((n lsr 8) land 0xFF);
     Out_channel.output_byte oc ((n lsr 16) land 0xFF);
@@ -589,33 +563,27 @@ let to_binstl ~rev path t =
     Bytes.set bs 79 '\n';
     Out_channel.output_bytes oc bs;
     (* number of facets *)
-    write_unsigned_long oc (List.length t.faces);
+    write_unsigned_long oc (List.length faces);
     List.iter
-      (function
-       | [ a; b; c ] ->
-         let a, b, c =
-           if rev then pts.(c), pts.(b), pts.(a) else pts.(a), pts.(b), pts.(c)
-         in
-         (* facet normal *)
-         let normal = V3.(normalize @@ cross (sub c a) (sub b a)) in
-         write_v3 oc normal;
-         (* vertices *)
-         write_v3 oc a;
-         write_v3 oc b;
-         write_v3 oc c;
-         (* attribute byte count (set to zero) *)
-         Out_channel.output_string oc "\000\000"
-       | _ -> failwith "Mesh should be triangulated for stl serialization." )
-      t.faces
+      (fun (a, b, c) ->
+        let a, b, c =
+          if rev then pts.(c), pts.(b), pts.(a) else pts.(a), pts.(b), pts.(c)
+        in
+        (* facet normal *)
+        let normal = V3.(normalize @@ cross (sub c a) (sub b a)) in
+        write_v3 oc normal;
+        (* vertices *)
+        write_v3 oc a;
+        write_v3 oc b;
+        write_v3 oc c;
+        (* attribute byte count (set to zero) *)
+        Out_channel.output_string oc "\000\000" )
+      faces
   in
   Out_channel.with_open_bin path f
 
-let to_stl ~rev path t =
-  let pts =
-    let a = Array.make t.size (List.hd t.points) in
-    List.iteri (fun i p -> a.(i) <- p) t.points;
-    a
-  and write_v3 oc p =
+let to_stl ~rev path { points = pts; faces } =
+  let write_v3 oc p =
     Out_channel.output_string oc (Float.to_string @@ V3.x p);
     Out_channel.output_char oc ' ';
     Out_channel.output_string oc (Float.to_string @@ V3.y p);
@@ -629,26 +597,24 @@ let to_stl ~rev path t =
   let f oc =
     Printf.fprintf oc "solid OCADml_Mesh";
     List.iter
-      (function
-       | [ a; b; c ] ->
-         let a, b, c =
-           if rev then pts.(c), pts.(b), pts.(a) else pts.(a), pts.(b), pts.(c)
-         in
-         let normal = V3.(normalize @@ cross (sub c a) (sub b a)) in
-         Out_channel.output_string oc "\n  facet normal ";
-         write_v3 oc normal;
-         Out_channel.output_string oc "\n    outer loop";
-         write_vertex oc a;
-         write_vertex oc b;
-         write_vertex oc c;
-         Out_channel.output_string oc "\n    endloop";
-         Out_channel.output_string oc "\n  endfacet"
-       | _ -> failwith "Mesh should be triangulated for stl serialization." )
-      t.faces;
+      (fun (a, b, c) ->
+        let a, b, c =
+          if rev then pts.(c), pts.(b), pts.(a) else pts.(a), pts.(b), pts.(c)
+        in
+        let normal = V3.(normalize @@ cross (sub c a) (sub b a)) in
+        Out_channel.output_string oc "\n  facet normal ";
+        write_v3 oc normal;
+        Out_channel.output_string oc "\n    outer loop";
+        write_vertex oc a;
+        write_vertex oc b;
+        write_vertex oc c;
+        Out_channel.output_string oc "\n    endloop";
+        Out_channel.output_string oc "\n  endfacet" )
+      faces;
     Printf.fprintf oc "\nendsolid OCADml_Mesh\n"
   in
   Out_channel.with_open_bin path f
 
 let to_stl ?(ascii = false) ?(rev = true) ?eps path t =
-  let t = triangulate ?eps @@ merge_points ?eps t in
+  let t = merge_points ?eps t in
   if ascii then to_stl ~rev path t else to_binstl ~rev path t

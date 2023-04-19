@@ -58,13 +58,13 @@ val of_path2 : ?plane:Plane.t -> Path2.t -> t
     Project the 3d path [t] onto [plane] (default = {!Plane.xy}). *)
 val to_path2 : ?plane:Plane.t -> t -> Path2.t
 
-(** [to_plane ?eps t]
+(** [to_plane ?no_check ?eps t]
 
     Compute the normalized cartesian equation of the plane that the path [t]
    resides on. If there are fewer than three points in [t], or they are not
-   coplanar within the tolerance [eps], an [Invalid_argument] exception is
-   raised. *)
-val to_plane : ?eps:float -> t -> Plane.t
+   coplanar within the tolerance [eps] (unless [no_check = true]), an
+   [Invalid_argument] exception is raised. *)
+val to_plane : ?no_check:bool -> ?eps:float -> t -> Plane.t
 
 (** [project plane t]
 

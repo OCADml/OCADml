@@ -137,10 +137,10 @@ module Cap = struct
           V2.zero
           (v2 0. (Float.abs joint))
           (v2 (-.joint) (Float.abs joint))
-      |> List.tl
-      |> List.fold_left f ([], Float.min_float)
-      |> fst
-      |> List.rev )
+        |> List.tl
+        |> List.fold_left f ([], Float.min_float)
+        |> fst
+        |> List.rev )
 
   let offsets offsets =
     let f (last_z, acc) { d; z } =
@@ -221,7 +221,7 @@ let cap ?check_valid ?len ~flip ~close ~offset_mode ~m ~offsets shape =
       List.mapi close last_shape :: List.concat faces )
     else List.concat faces
   in
-  List.hd points, Mesh0.make ~points:List.(concat (rev points)) ~faces
+  List.hd points, Mesh0.of_polyhedron List.(concat (rev points)) faces
 
 type poly_morph =
   | Fixed of Poly2.t

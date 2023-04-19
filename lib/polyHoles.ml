@@ -60,7 +60,7 @@ let outer_intersect p outer =
         else if y po1 < y p && y po2 >= y p
         then (
           let u = (y p -. y po2) /. (y po1 -. y po2) in
-          update i (V2.lerp po1 po2 u) ))
+          update i (V2.lerp po1 po2 u) ) )
   done;
   if Float.is_infinite !out_x
   then failwith "Invalid polygon: holes may intersect with eachother, or the outer walls."
@@ -96,7 +96,7 @@ let extremes holes =
   let max_x m e = if V2.x e.p > V2.x m.p then e else m in
   let rightmost =
     Array.init (Array.length holes) (fun i ->
-        Array.fold_left max_x holes.(i).(0) holes.(i) )
+      Array.fold_left max_x holes.(i).(0) holes.(i) )
   in
   Array.sort V2.(fun { p = p1; _ } { p = p2; _ } -> Float.compare (x p2) (x p1)) rightmost;
   rightmost
@@ -189,9 +189,23 @@ let partition ?(rev = false) ?(lift = V3.of_v2 ~z:0.) ~holes outer =
   in
   let bridges = remove_duplicate_bridges pos_bridges neg_bridges in
   let polys = List.fold_left (fun polys b -> insert_bridge b polys) [| poly |] bridges in
-  let points = List.map lift @@ List.concat @@ List.concat [ holes; [ outer ] ]
-  and faces =
-    let f i =
+  let pts2d, pts3d =
+    let n = List.length outer + List.fold_left (fun n l -> n + List.length l) 0 holes in
+    let pts2 = Array.make n V2.zero
+    and pts3 = Array.make n V3.zero in
+    let rec add i = function
+      | hd :: tl ->
+        pts2.(i) <- hd;
+        pts3.(i) <- lift hd;
+        add (i + 1) tl
+      | [] -> i
+    in
+    let start = List.fold_left (fun start hole -> add start hole) 0 holes in
+    let _ = add start outer in
+    pts2, pts3
+  in
+  let faces =
+    let f i tris =
       let poly = polys.(i) in
       let len = Array.length poly in
       let flip =
@@ -199,10 +213,13 @@ let partition ?(rev = false) ?(lift = V3.of_v2 ~z:0.) ~holes outer =
         then fun j -> len - 1 - j
         else Fun.id
       in
-      List.init len (fun j ->
+      let idxs =
+        Array.init len (fun j ->
           let { tag = { n; idx }; _ } = poly.(flip j) in
           idx + face_offsets.(n) )
+      in
+      List.rev_append (Triangulate.triangulate ~idxs pts2d) tris
     in
-    List.init (Array.length polys) f
+    Util.fold_init (Array.length polys) f []
   in
-  points, faces
+  pts3d, faces

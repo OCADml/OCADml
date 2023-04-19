@@ -1,1 +1,6 @@
-val triangulate : ?eps:float -> ?idxs:int array -> V.v2 array -> int list list
+val triangulate
+  :  ?rev:bool
+  -> ?eps:float
+  -> ?idxs:int array
+  -> V.v2 array
+  -> (int * int * int) list

@@ -223,11 +223,11 @@ let coplanar ?eps t =
   (* too few points, or co-linear *)
   | Invalid_argument _ -> false
 
-let to_plane ?eps = function
+let to_plane ?(no_check = false) ?eps = function
   | [ p0; p1; p2 ] -> Plane.make p0 p1 p2
   | point :: _ as t ->
     let plane = Plane.of_normal ~point (normal t) in
-    if Plane.are_points_on ?eps plane t
+    if no_check || Plane.are_points_on ?eps plane t
     then plane
     else invalid_arg "Path is not coplanar."
   | _ -> invalid_arg "Path must contain at least 3 points to define a plane."

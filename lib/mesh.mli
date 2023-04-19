@@ -1,11 +1,15 @@
-(** Generation, and manipulation of 3-dimensional meshes (points and faces).
+(** Generation, and manipulation of triangular meshes (points and faces).
 
     This data type and its constructors/transformers are based on the
     the {{:https://github.com/revarbat/BOSL2/blob/master/vnf.scad} vnf
     structure module} of
-    the {{:https://github.com/revarbat/BOSL2/} BOSL2 OpenSCAD library}. *)
+    the {{:https://github.com/revarbat/BOSL2/} BOSL2 OpenSCAD library}, but with
+    the constraint that all faces are triangular on construction. *)
 
-(** Points and faces 3-dimensional mesh. *)
+(** Triangular face indices *)
+type tri = int * int * int
+
+(** Triangular mesh (points and faces) *)
 type t
 
 (** {1 Basic Constructors }*)
@@ -17,13 +21,17 @@ val empty : t
 
     Create a mesh [t] from a list of {!V3.t} [points], and a list of [faces]
     described by indices into [points]. *)
-val make : points:V3.t list -> faces:int list list -> t
+val make : points:V3.t list -> faces:tri list -> t
 
 (** {1 Accessors} *)
 
 val size : t -> int
 val points : t -> V3.t list
-val faces : t -> int list list
+
+(** [e t i] gets the point at index [i] *)
+val e : t -> int -> V3.t
+
+val faces : t -> tri list
 
 (** {1 Low-level Generators} *)
 
@@ -58,7 +66,7 @@ val prune_rows : ?min_dist:float -> Path3.t list -> int list * Path3.t list
 
 (** [of_rows ?rev ?endcaps ?col_wrap ?style rows]
 
-    Create a {!type:t} representing a polyhedron from a list of layers
+    Create a triangular mesh {!type:t} from a list of layers
     (counter_clockwise loops of 3d points). [endcaps] defaults to [`Both], which
     specifies that faces should be generated to close off the bottom and top
     layers of the generated shape. If it is instead set to [`Loop], the open
@@ -94,9 +102,9 @@ val of_rows
     Create a triangular mesh from a list of rows, where each row can differ in
     length relative to its neighbours by up to 2. Since the rows can be ragged,
     no (columnar) wrapping is done, thus they are best described as rows, rather
-    than layers as with {!of_rows} which produces an enclosed polyhedron.
+    than layers as with {!of_rows} which produces a mesh of a closed shape.
     Instead, this function is useful for the generation of triangular patches
-    that can be joined with one another to create a complete polyhedron. Setting
+    that can be joined with one another to create a complete mesh. Setting
     [looped] to true will generate faces between the last and first rows, so long
     as their lengths differ by no more than 2. Face winding order is reversed if
     [reverse] is [true]. Throws [Invalid_argument] if a row length delta of
@@ -148,7 +156,7 @@ val of_poly3 : ?rev:bool -> Poly3.t -> t
 
 (** [of_polygons polys]
 
-    Create a polyhedron mesh from a list of polygonal point faces. *)
+    Create a triangular mesh from a list of polygonal point faces. *)
 val of_polygons : Path3.t list -> t
 
 (** [hull points]
@@ -693,17 +701,17 @@ module Prism : sig
     ; k_bot : float option (** curvature smoothness of bottom edges *)
     ; k_top : float option (** curvature smoothness of bottom top *)
     ; k_sides : [ `Flat of float | `Mix of float list ] option
-          (** smoothness to be applied flatly to all side edges, or a list
+        (** smoothness to be applied flatly to all side edges, or a list
                  specifying a smoothness for each edge (must be same length as
                  corresponding paths) *)
     ; joint_bot : float * float
-          (** pair of inwards (into bottom face) and upwards (towards top)
+        (** pair of inwards (into bottom face) and upwards (towards top)
                 joint distances  *)
     ; joint_top : float * float
-          (** pair of inwards (into top face) and downwards (towards bottom)
+        (** pair of inwards (into top face) and downwards (towards bottom)
                 joint distances  *)
     ; joint_sides : [ `Flat of float * float | `Mix of (float * float) list ]
-          (** pair of backwards and forwards joint distances to be applied
+        (** pair of backwards and forwards joint distances to be applied
                 flatly to all side edges, or a list specifying joints for each
                 edge (must be same length as corresponding paths) *)
     }
@@ -841,12 +849,13 @@ val merge_points : ?eps:float -> t -> t
     Drop unreferenced points (not included in any face) from the mesh [t]. *)
 val drop_unused_points : t -> t
 
-(** [triangulate ?eps t]
+(** [of_polyhedron ?eps points faces]
 
-    Triangulate the faces of the mesh [t]. Some degree of coplanarity in the
-    input faces can be fine, though too much  can cause triangulation to fail. If
-    provided, [eps] is used for duplicate point and collinearity checks. *)
-val triangulate : ?eps:float -> t -> t
+    Triangulate the faces of the polygonal mesh described by [points] and
+    [faces]. Some degree of non-coplanarity in the input faces can be fine, though
+    too much  can cause triangulation to fail. If provided, [eps] is used for
+    duplicate point and collinearity checks. *)
+val of_polyhedron : ?eps:float -> V3.t list -> int list list -> t
 
 (** [rev_faces t]
 
