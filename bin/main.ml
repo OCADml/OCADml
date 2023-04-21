@@ -23,14 +23,11 @@ let () =
     Path3.
       [ pent
       ; ztrans 6. pent
-      ; translate (v3 15. 0. 20.) (yrot (Float.pi /. 2.) circ)
+      ; translate (v3 12.5 0. 20.) (yrot (Float.pi /. 2.) circ)
+      ; translate (v3 17.5 0. 20.) (yrot (Float.pi /. 2.) circ)
       ; List.rev @@ translate (v3 30. 0. 6.) (zrot Float.pi pent)
       ; List.rev @@ xtrans 30. (zrot Float.pi pent)
       ]
   in
   Mesh.to_stl "skline_test2.stl"
-  @@ Mesh.skline
-       ~mapping:(`Flat (`Reindex `ByLen))
-       ~fn:100
-       ~size:(`Flat (`Rel 0.05))
-       profs
+  @@ Mesh.skline ~mapping:(`Flat (`Direct `ByLen)) ~fn:100 ~size:(`Flat (`Rel 0.05)) profs
