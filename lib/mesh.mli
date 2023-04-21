@@ -281,6 +281,21 @@ val skin_between
   -> Path3.t
   -> t
 
+val skline
+  :  ?style:style
+  -> ?endcaps:endcaps
+  -> ?refine:int
+  -> ?mapping:[ `Flat of mapping | `Mix of mapping list ]
+  -> ?fn:int
+  -> ?size:
+       [ `Abs of float list
+       | `Rel of float list
+       | `Flat of [ `Abs of float | `Rel of float ]
+       | `Mix of [ `Abs of float | `Rel of float ] list
+       ]
+  -> Path3.t list
+  -> t
+
 (** {1 Sweeps, extrusions, and morphs with roundovers}
 
 Sweeps, extrusions and morphs from 2d to 3d. Each of which can be given rounded
