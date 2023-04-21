@@ -15,3 +15,22 @@ let profiles =
 (* let () = Mesh.to_stl "skline_test.stl" @@ Mesh.skin ~slices:(`Flat 0) profiles *)
 let () =
   Mesh.to_stl "skline_test.stl" @@ Mesh.skline ~fn:100 ~size:(`Flat (`Rel 0.05)) profiles
+
+let () =
+  let circ = Path3.circle ~fn:32 5.
+  and pent = Path3.circle ~fn:5 5. in
+  let profs =
+    Path3.
+      [ pent
+      ; ztrans 6. pent
+      ; translate (v3 15. 0. 20.) (yrot (Float.pi /. 2.) circ)
+      ; List.rev @@ translate (v3 30. 0. 6.) (zrot Float.pi pent)
+      ; List.rev @@ xtrans 30. (zrot Float.pi pent)
+      ]
+  in
+  Mesh.to_stl "skline_test2.stl"
+  @@ Mesh.skline
+       ~mapping:(`Flat (`Reindex `ByLen))
+       ~fn:100
+       ~size:(`Flat (`Rel 0.05))
+       profs
