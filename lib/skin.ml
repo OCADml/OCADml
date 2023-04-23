@@ -214,27 +214,31 @@ let skline
           | `Reindex sampling -> false, sampling
           | _ -> failwith "impossible"
         in
-        let f i (acc, last_p) =
-          let direct, sampling = unpack_resampler i in
-          let resampled = resample n sampling profs.(i + 1) in
-          if direct
-          then resampled :: acc, resampled
-          else Path3.reindex_polygon last_p resampled :: acc, resampled
-        and resampled_hd = resample n (snd @@ unpack_resampler 0) profs.(0) in
-        let fixed_hd =
+        let resampled_hd = resample n (snd @@ unpack_resampler 0) profs.(0) in
+        let fixed =
+          let a =
+            Array.make (n_profs + Bool.to_int looped) (Array.of_list resampled_hd)
+          in
+          let last_prof = ref resampled_hd in
+          for i = 1 to n_profs - 1 do
+            let direct, sampling = unpack_resampler (i - 1) in
+            let resampled = resample n sampling profs.(i) in
+            if direct
+            then a.(i) <- Array.of_list resampled
+            else a.(i) <- Array.of_list @@ Path3.reindex_polygon !last_prof resampled
+          done;
           if looped
           then (
-            let direct, samp = unpack_resampler (n_profs - 1) in
-            if not direct
-            then Path3.reindex_polygon (resample n samp profs.(n_profs - 1)) resampled_hd
-            else resampled_hd )
-          else resampled_hd
+            let fixed_hd =
+              let direct, samp = unpack_resampler (n_profs - 1) in
+              if not direct
+              then
+                Path3.reindex_polygon (resample n samp profs.(n_profs - 1)) resampled_hd
+              else resampled_hd
+            in
+            a.(n_profs) <- Array.of_list fixed_hd );
+          a
         in
-        let fixed =
-          let l, _ = Util.fold_init (n_profs - 1) f ([ resampled_hd ], resampled_hd) in
-          List.rev @@ if looped then fixed_hd :: l else l
-        in
-        let fixed = Util.array_of_list_map Array.of_list fixed in
         let layers =
           let n_profs = Array.length fixed
           and n_bezs = Array.length fixed.(0) in

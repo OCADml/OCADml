@@ -3,7 +3,7 @@ open! OCADml
 let () = print_endline "hello"
 
 let profiles =
-  let fn = 32
+  let fn = 64
   and up h = Path3.translate (v3 0. 0. h) in
   let base =
     let sq = Path3.square ~center:true (v2 2. 4.) in
