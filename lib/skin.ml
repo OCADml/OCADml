@@ -220,23 +220,7 @@ let skline
         a )
       else (
         (* TODO:
-    Need to alter this to a scheme where all of the profiles can be handled at
-    once like above (then the bezier creation will not need to be duplicated).
-    This likely will mean that certain transitions will probably not be allowed.
-    Should check the way that BOSL2 does it again. In order for the curves to be
-    continuous between the profiles, the resamplings/duplications can't rely on
-    being joined as they are now.
-
-    See https://github.com/revarbat/BOSL2/blob/master/skin.scad#L468
-    A transition profile is where there is a switch between resampler and duplicator.
-    Need to read more closely, but as the assert says, this scheme rejects when
-    there is a profile length mismatch at the transitions (to make sure that the
-    points line up (duplicated points are fine as long as they are in the same
-    spot)). Unfortunately, this is not good enough for me, as they still do the
-    slicing separately for each transition. This bezier skinning will only work
-    if the points can be connected in continuous curves through all the profiles.
-
-   With that in mind, the constraints of skline with duplicators are:
+   The constraints of skline with duplicators are:
    - if the first of a pair has points added to match up with the second
      the second cannot have its point count change during the next
      pairing (via duplication or sampling).
@@ -313,13 +297,10 @@ let skline
       let n_profs = Array.length matched
       and n_bezs = Array.length matched.(0) in
       let bezs =
-        let f i =
-          Bezier3.of_path ?size ?tangents (List.init n_profs (fun j -> matched.(j).(i)))
-        in
-        Array.init n_bezs f
+        Array.init n_bezs (fun i ->
+          Bezier3.of_path ?size ?tangents (List.init n_profs (fun j -> matched.(j).(i))) )
       in
       let s = 1. /. Float.of_int fn in
-      let f i = List.init n_bezs (fun j -> bezs.(j) (Float.of_int i *. s)) in
-      List.init fn f
+      List.init fn (fun i -> List.init n_bezs (fun j -> bezs.(j) (Float.of_int i *. s)))
     in
     Mesh0.of_rows ~style ~endcaps layers
