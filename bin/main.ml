@@ -25,9 +25,25 @@ let () =
       ; ztrans 6. pent
       ; translate (v3 12.5 0. 20.) (yrot (Float.pi /. 2.) circ)
       ; translate (v3 17.5 0. 20.) (yrot (Float.pi /. 2.) circ)
-      ; List.rev @@ translate (v3 30. 0. 6.) (zrot Float.pi pent)
-      ; List.rev @@ xtrans 30. (zrot Float.pi pent)
+      ; translate (v3 30. 0. 6.) (yrot Float.pi pent)
+      ; xtrans 30. (yrot Float.pi pent)
       ]
   in
   Mesh.to_stl "skline_test2.stl"
   @@ Mesh.skline ~mapping:(`Flat (`Direct `ByLen)) ~fn:100 ~size:(`Flat (`Rel 0.05)) profs
+
+let () =
+  let circ = Path3.circle ~fn:64 5. in
+  let profs =
+    Path3.
+      [ ztrans (-3.) (scale (v3 1.2 1.2 1.) circ)
+      ; circ
+      ; translate (v3 15. 0. 20.) (yrot (Float.pi /. 2.) circ)
+      ; xtrans 30. (yrot Float.pi circ)
+      ; translate (v3 30. 0. (-3.)) (scale (v3 1.2 1.2 1.) (yrot Float.pi circ))
+      ]
+  and tangents =
+    `Tangents [ v3 0. 0. 1.; v3 0. 0. 1.; v3 1. 0. 0.; v3 0. 0. (-1.); v3 0. 0. (-1.) ]
+  in
+  Mesh.to_stl "skline_test3.stl"
+  @@ Mesh.skline ~fn:200 ~size:(`Flat (`Rel 0.5)) ~tangents profs

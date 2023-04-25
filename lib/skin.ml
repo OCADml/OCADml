@@ -179,6 +179,7 @@ let skline
   ?(mapping = `Flat (`Direct `ByLen))
   ?(fn = 36)
   ?size
+  ?tangents
   = function
   | [] | [ _ ] -> invalid_arg "At least two profiles are required to skin."
   | profs ->
@@ -200,43 +201,29 @@ let skline
       Util.value_map_opt ~default:max (fun r -> r * max) refine
     and all_resamplers =
       match mapping with
-      | `Flat (`Direct _ | `Reindex _) -> true
-      | `Mix l -> List.for_all is_resampler l
+      | `Flat (`Direct _) -> true
+      | `Mix l -> List.for_all is_direct l
       | _ -> false
     in
     let len_sliced, sliced =
       if all_resamplers
       then (
         (* there are no duplicators, so all profiles can be handled together. *)
-        let unpack_resampler i =
+        let unpack_sampling i =
           match get_mapping i with
-          | `Direct sampling -> true, sampling
-          | `Reindex sampling -> false, sampling
+          | `Direct sampling -> sampling
           | _ -> failwith "impossible"
         in
-        let resampled_hd = resample n (snd @@ unpack_resampler 0) profs.(0) in
+        let resampled_hd = resample n (unpack_sampling 0) profs.(0) in
         let fixed =
           let a =
             Array.make (n_profs + Bool.to_int looped) (Array.of_list resampled_hd)
           in
-          let last_prof = ref resampled_hd in
           for i = 1 to n_profs - 1 do
-            let direct, sampling = unpack_resampler (i - 1) in
-            let resampled = resample n sampling profs.(i) in
-            if direct
-            then a.(i) <- Array.of_list resampled
-            else a.(i) <- Array.of_list @@ Path3.reindex_polygon !last_prof resampled
+            let resampled = resample n (unpack_sampling (i - 1)) profs.(i) in
+            a.(i) <- Array.of_list resampled
           done;
-          if looped
-          then (
-            let fixed_hd =
-              let direct, samp = unpack_resampler (n_profs - 1) in
-              if not direct
-              then
-                Path3.reindex_polygon (resample n samp profs.(n_profs - 1)) resampled_hd
-              else resampled_hd
-            in
-            a.(n_profs) <- Array.of_list fixed_hd );
+          if looped then a.(n_profs) <- Array.of_list resampled_hd;
           a
         in
         let layers =
@@ -244,7 +231,7 @@ let skline
           and n_bezs = Array.length fixed.(0) in
           let bezs =
             let f i =
-              Bezier3.of_path ?size (List.init n_profs (fun j -> fixed.(j).(i)))
+              Bezier3.of_path ?size ?tangents (List.init n_profs (fun j -> fixed.(j).(i)))
             in
             Array.init n_bezs f
           in
@@ -282,18 +269,29 @@ let skline
      greater than the number of points than the one following it)
    - when looping, the final version of the first profile must be
      identical, such that Bezier3.of_path can be called with ~closed:true
+   - NOTE: the larger path of a pair is actually reindexed by point rotation by
+     duplicators (except in aligned_distance_match which assumes that they are
+     already lined up -- there is no aligned version of tangent_match
+     unfortunately).
+   - therefore, the above mentioned constraints are not adequate. I need to
+     ignore the reindexed big profile returned by tangent_match (and make a note
+     that this is the behaviour in the doc comment)
         *)
+        (* TODO: I'll just dissalow reindexing entirely to simplify things (direct,
+      fastdistance, and tangent (with a note that tangent ignores the reindex))
+      also, the resampled hd start doesn't work when duplicator is included,
+    just have to have a loop that starts with the first transition *)
         let up =
           let fallback i p =
             match get_mapping (Util.index_wrap ~len:n_profs (i - 1)) with
-            | `Direct sampling | `Reindex sampling -> resample n sampling p
+            | `Direct sampling -> resample n sampling p
             | _ -> resample n `BySeg p
           in
           let f i p =
             if i < n_transitions || looped
             then (
               match get_mapping i with
-              | `Direct sampling | `Reindex sampling -> resample n sampling p
+              | `Direct sampling -> resample n sampling p
               | _ -> if i > 0 || looped then fallback i p else resample n `BySeg p )
             else fallback i p
           in
@@ -305,11 +303,9 @@ let skline
             (* resamplers are upsampled before alignment, duplicators are upsampled after *)
             match get_mapping i with
             | `Direct _ -> [ up.(i); up.(j) ]
-            | `Reindex _ -> [ up.(i); Path3.reindex_polygon up.(i) up.(j) ]
-            | `Distance -> upsample_dups @@ Path3.distance_match profs.(i) profs.(j)
             | `FastDistance ->
               upsample_dups @@ Path3.aligned_distance_match profs.(i) profs.(j)
-            | `Tangent -> upsample_dups @@ Path3.tangent_match profs.(i) profs.(j)
+            | `DirectTangent -> upsample_dups @@ Path3.tangent_match profs.(i) profs.(j)
           in
           (* slice_profiles ~slices:(`Flat (get_slices i)) pair :: acc *)
           slice_profiles ~slices:(`Flat fn) pair :: acc

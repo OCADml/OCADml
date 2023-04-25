@@ -285,7 +285,10 @@ val skline
   :  ?style:style
   -> ?endcaps:endcaps
   -> ?refine:int
-  -> ?mapping:[ `Flat of mapping | `Mix of mapping list ]
+  -> ?mapping:
+       [ `Flat of [ `Direct of [ `ByLen | `BySeg ] | `FastDistance | `DirectTangent ]
+       | `Mix of [ `Direct of [ `ByLen | `BySeg ] | `FastDistance | `DirectTangent ] list
+       ]
   -> ?fn:int
   -> ?size:
        [ `Abs of float list
@@ -293,6 +296,7 @@ val skline
        | `Flat of [ `Abs of float | `Rel of float ]
        | `Mix of [ `Abs of float | `Rel of float ] list
        ]
+  -> ?tangents:[ `NonUniform | `Uniform | `Tangents of V3.t list ]
   -> Path3.t list
   -> t
 
