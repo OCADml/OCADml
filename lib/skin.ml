@@ -145,7 +145,7 @@ let skin
           let j = (i + 1) mod n_profs in
           let pair =
             (* resamplers are upsampled before alignment, duplicators are upsampled after *)
-            match get_mapping i with
+            match get_mapping (Util.index_wrap ~len:n_profs i) with
             | `Direct _ -> [ up.(i); up.(j) ]
             | `Reindex _ -> [ up.(i); Path3.reindex_polygon up.(i) up.(j) ]
             | `Distance -> upsample_dups @@ Path3.distance_match profs.(i) profs.(j)
@@ -195,16 +195,17 @@ let skline
     and profs = Array.of_list profs in
     let n_profs = Array.length profs in
     let n_transitions = n_profs - if looped then 0 else 1 in
+    let prof_lens = Array.map List.length profs in
     let get_mapping = Util.getter ~len:n_transitions ~name:"mapping" mapping
     and n =
-      let max = Array.fold_left (fun mx l -> Int.max (List.length l) mx) 0 profs in
+      let max = Array.fold_left (fun mx len -> Int.max len mx) 0 prof_lens in
       Util.value_map_opt ~default:max (fun r -> r * max) refine
     and all_resamplers =
       match mapping with
       | `Flat (`Direct _) -> true
       | `Mix l -> List.for_all is_direct l
       | _ -> false
-    in
+    and get_prof_len i = prof_lens.(Util.index_wrap ~len:n_profs i) in
     let len_sliced, sliced =
       if all_resamplers
       then (
@@ -220,7 +221,6 @@ let skline
           for i = 1 to n_profs - 1 do
             a.(i) <- Array.of_list @@ resample n (unpack_sampling (i - 1)) profs.(i)
           done;
-          if looped then a.(n_profs) <- resampled_hd;
           a
         in
         let layers =
@@ -274,10 +274,61 @@ let skline
      ignore the reindexed big profile returned by tangent_match (and make a note
      that this is the behaviour in the doc comment)
         *)
-        (* TODO: I'll just dissalow reindexing entirely to simplify things (direct,
-      fastdistance, and tangent (with a note that tangent ignores the reindex))
-      also, the resampled hd start doesn't work when duplicator is included,
-    just have to have a loop that starts with the first transition *)
+        let _num, _layers =
+          let last_duped =
+            if looped && (not @@ is_direct (get_mapping (n_profs - 1)))
+            then ref (Some (get_prof_len (n_profs - 1) > get_prof_len 0))
+            else ref None
+          in
+          for i = 1 to n_profs - 2 do
+            if not @@ is_direct (get_mapping (i - 1))
+            then (
+              let duped = get_prof_len (i - 1) > get_prof_len i in
+              if duped
+                 && Option.value ~default:false !last_duped
+                 && get_prof_len i < get_prof_len (i + 1)
+              then invalid_arg "skline: same profile cannot be duplicated twice";
+              last_duped := Some duped )
+            else last_duped := None
+          done;
+          (* TODO:
+                 - need to check lengths of the profiles and make sure that
+                   there won't be any illegal changes (anything involved in a
+                   duplicator cannot be involved in another transition taht would require
+                   adding to its points)
+                 - handle the first profile resampling appropriately (depends on
+                   the last if it is looped, otherwise it is the same as usual) *)
+          let unpack_sampling i =
+            match get_mapping i with
+            | `Direct sampling -> sampling
+            | _ -> failwith "impossible"
+          in
+          let fixed =
+            let a = Array.make (n_profs + Bool.to_int looped) [||] in
+            for i = 1 to n_profs - 1 do
+              a.(i) <- Array.of_list @@ resample n (unpack_sampling (i - 1)) profs.(i)
+            done;
+            if looped then a.(n_profs) <- a.(0);
+            a
+          in
+          let layers =
+            let n_profs = Array.length fixed
+            and n_bezs = Array.length fixed.(0) in
+            let bezs =
+              let f i =
+                Bezier3.of_path
+                  ?size
+                  ?tangents
+                  (List.init n_profs (fun j -> fixed.(j).(i)))
+              in
+              Array.init n_bezs f
+            in
+            let s = 1. /. Float.of_int fn in
+            let f i = List.init n_bezs (fun j -> bezs.(j) (Float.of_int i *. s)) in
+            List.init fn f
+          in
+          1, [ layers ]
+        in
         let up =
           let fallback i p =
             match get_mapping (Util.index_wrap ~len:n_profs (i - 1)) with
