@@ -214,16 +214,13 @@ let skline
           | `Direct sampling -> sampling
           | _ -> failwith "impossible"
         in
-        let resampled_hd = resample n (unpack_sampling 0) profs.(0) in
+        let resampled_hd = Array.of_list @@ resample n (unpack_sampling 0) profs.(0) in
         let fixed =
-          let a =
-            Array.make (n_profs + Bool.to_int looped) (Array.of_list resampled_hd)
-          in
+          let a = Array.make (n_profs + Bool.to_int looped) resampled_hd in
           for i = 1 to n_profs - 1 do
-            let resampled = resample n (unpack_sampling (i - 1)) profs.(i) in
-            a.(i) <- Array.of_list resampled
+            a.(i) <- Array.of_list @@ resample n (unpack_sampling (i - 1)) profs.(i)
           done;
-          if looped then a.(n_profs) <- Array.of_list resampled_hd;
+          if looped then a.(n_profs) <- resampled_hd;
           a
         in
         let layers =
