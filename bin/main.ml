@@ -34,16 +34,17 @@ let () =
 
 let () =
   let circ = Path3.circle ~fn:64 5. in
+  let base = Path3.scale (v3 1.2 1.2 1.) circ
+  and handle = Path3.scale (v3 0.7 0.7 1.) circ
+  and up = v3 0. 0. 1. in
   let profs =
     Path3.
-      [ ztrans (-3.) (scale (v3 1.2 1.2 1.) circ)
+      [ ztrans (-3.) base
       ; circ
-      ; translate (v3 15. 0. 20.) (yrot (Float.pi /. 2.) circ)
+      ; translate (v3 15. 0. 20.) (yrot (Float.pi /. 2.) handle)
       ; xtrans 30. (yrot Float.pi circ)
-      ; translate (v3 30. 0. (-3.)) (scale (v3 1.2 1.2 1.) (yrot Float.pi circ))
+      ; translate (v3 30. 0. (-3.)) (yrot Float.pi base)
       ]
-  and tangents =
-    `Tangents [ v3 0. 0. 1.; v3 0. 0. 1.; v3 1. 0. 0.; v3 0. 0. (-1.); v3 0. 0. (-1.) ]
-  in
+  and tangents = `Tangents [ up; up; v3 1. 0. 0.; V3.neg up; V3.neg up ] in
   Mesh.to_stl "skline_test3.stl"
   @@ Mesh.skline ~fn:200 ~size:(`Flat (`Rel 0.5)) ~tangents profs

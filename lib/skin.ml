@@ -184,13 +184,10 @@ let skline
   | [] | [ _ ] -> invalid_arg "At least two profiles are required to skin."
   | profs ->
     let refine = Option.bind refine (fun n -> if n > 1 then Some n else None)
-    and looped, bot_cap, top_cap =
+    and looped =
       match endcaps with
-      | `Both -> false, true, true
-      | `Loop -> true, false, false
-      | `Bot -> false, true, false
-      | `Top -> false, false, true
-      | `None -> false, false, false
+      | `Loop -> true
+      | _ -> false
     and resample n s = Path3.subdivide ~closed:true ~freq:(`N (n, s))
     and profs = Array.of_list profs in
     let n_profs = Array.length profs in
@@ -206,7 +203,7 @@ let skline
       | `Mix l -> List.for_all is_direct l
       | _ -> false
     and get_prof_len i = prof_lens.(Util.index_wrap ~len:n_profs i) in
-    let len_sliced, sliced =
+    let matched =
       if all_resamplers
       then (
         (* there are no duplicators, so all profiles can be handled together. *)
@@ -216,27 +213,11 @@ let skline
           | _ -> failwith "impossible"
         in
         let resampled_hd = Array.of_list @@ resample n (unpack_sampling 0) profs.(0) in
-        let fixed =
-          let a = Array.make (n_profs + Bool.to_int looped) resampled_hd in
-          for i = 1 to n_profs - 1 do
-            a.(i) <- Array.of_list @@ resample n (unpack_sampling (i - 1)) profs.(i)
-          done;
-          a
-        in
-        let layers =
-          let n_profs = Array.length fixed
-          and n_bezs = Array.length fixed.(0) in
-          let bezs =
-            let f i =
-              Bezier3.of_path ?size ?tangents (List.init n_profs (fun j -> fixed.(j).(i)))
-            in
-            Array.init n_bezs f
-          in
-          let s = 1. /. Float.of_int fn in
-          let f i = List.init n_bezs (fun j -> bezs.(j) (Float.of_int i *. s)) in
-          List.init fn f
-        in
-        1, [ layers ] )
+        let a = Array.make (n_profs + Bool.to_int looped) resampled_hd in
+        for i = 1 to n_profs - 1 do
+          a.(i) <- Array.of_list @@ resample n (unpack_sampling (i - 1)) profs.(i)
+        done;
+        a )
       else (
         (* TODO:
     Need to alter this to a scheme where all of the profiles can be handled at
@@ -274,100 +255,71 @@ let skline
      ignore the reindexed big profile returned by tangent_match (and make a note
      that this is the behaviour in the doc comment)
         *)
-        let _num, _layers =
-          let last_duped =
-            if looped && (not @@ is_direct (get_mapping (n_profs - 1)))
-            then ref (Some (get_prof_len (n_profs - 1) > get_prof_len 0))
-            else ref None
-          in
-          for i = 1 to n_profs - 2 do
-            if not @@ is_direct (get_mapping (i - 1))
-            then (
-              let duped = get_prof_len (i - 1) > get_prof_len i in
-              if duped
-                 && Option.value ~default:false !last_duped
-                 && get_prof_len i < get_prof_len (i + 1)
-              then invalid_arg "skline: same profile cannot be duplicated twice";
-              last_duped := Some duped )
-            else last_duped := None
-          done;
-          (* TODO:
-                 - need to check lengths of the profiles and make sure that
-                   there won't be any illegal changes (anything involved in a
-                   duplicator cannot be involved in another transition taht would require
-                   adding to its points)
-                 - handle the first profile resampling appropriately (depends on
-                   the last if it is looped, otherwise it is the same as usual) *)
-          let unpack_sampling i =
-            match get_mapping i with
-            | `Direct sampling -> sampling
-            | _ -> failwith "impossible"
-          in
-          let fixed =
-            let a = Array.make (n_profs + Bool.to_int looped) [||] in
-            for i = 1 to n_profs - 1 do
-              a.(i) <- Array.of_list @@ resample n (unpack_sampling (i - 1)) profs.(i)
-            done;
-            if looped then a.(n_profs) <- a.(0);
-            a
-          in
-          let layers =
-            let n_profs = Array.length fixed
-            and n_bezs = Array.length fixed.(0) in
-            let bezs =
-              let f i =
-                Bezier3.of_path
-                  ?size
-                  ?tangents
-                  (List.init n_profs (fun j -> fixed.(j).(i)))
-              in
-              Array.init n_bezs f
-            in
-            let s = 1. /. Float.of_int fn in
-            let f i = List.init n_bezs (fun j -> bezs.(j) (Float.of_int i *. s)) in
-            List.init fn f
-          in
-          1, [ layers ]
+        let last_duped =
+          let duplicating = not @@ is_direct (get_mapping (n_profs - 1)) in
+          if looped && duplicating
+          then ref (Some (get_prof_len (n_profs - 1) > get_prof_len 0))
+          else if duplicating
+          then ref (Some (get_prof_len 1 > get_prof_len 0))
+          else ref None
         in
-        let up =
-          let fallback i p =
-            match get_mapping (Util.index_wrap ~len:n_profs (i - 1)) with
-            | `Direct sampling -> resample n sampling p
-            | _ -> resample n `BySeg p
+        for i = 1 to n_profs - 2 do
+          if not @@ is_direct (get_mapping (i - 1))
+          then (
+            let duped = get_prof_len (i - 1) > get_prof_len i in
+            if duped
+               && Option.value ~default:false !last_duped
+               && get_prof_len i < get_prof_len (i + 1)
+            then invalid_arg "skline: same profile cannot be duplicated twice";
+            last_duped := Some duped )
+          else last_duped := None
+        done;
+        let apply_dup kind s j =
+          let i = Util.index_wrap ~len:n_profs (j - 1)
+          and j = Util.index_wrap ~len:n_profs j in
+          let get = if s then snd else fst
+          and a, b = if s then j, i else i, j in
+          let dup =
+            if prof_lens.(a) >= prof_lens.(b)
+            then profs.(a)
+            else (
+              match kind with
+              | `FastDistance -> get @@ Path3.aligned_distance_match profs.(b) profs.(a)
+              | `DirectTangent -> get @@ Path3.tangent_match profs.(b) profs.(a) )
           in
-          let f i p =
-            if i < n_transitions || looped
-            then (
-              match get_mapping i with
-              | `Direct sampling -> resample n sampling p
-              | _ -> if i > 0 || looped then fallback i p else resample n `BySeg p )
-            else fallback i p
-          in
-          Array.mapi f profs
-        and upsample_dups (a, b) = [ resample n `BySeg a; resample n `BySeg b ] in
-        let f i acc =
-          let j = (i + 1) mod n_profs in
-          let pair =
-            (* resamplers are upsampled before alignment, duplicators are upsampled after *)
-            match get_mapping i with
-            | `Direct _ -> [ up.(i); up.(j) ]
-            | `FastDistance ->
-              upsample_dups @@ Path3.aligned_distance_match profs.(i) profs.(j)
-            | `DirectTangent -> upsample_dups @@ Path3.tangent_match profs.(i) profs.(j)
-          in
-          (* slice_profiles ~slices:(`Flat (get_slices i)) pair :: acc *)
-          slice_profiles ~slices:(`Flat fn) pair :: acc
+          Array.of_list @@ resample n `BySeg dup
         in
-        n_transitions, List.rev @@ Util.fold_init n_transitions f [] )
+        let resampled_hd =
+          match get_mapping 0 with
+          | `Direct sampling -> Array.of_list @@ resample n sampling profs.(0)
+          | (`FastDistance | `DirectTangent) as dup -> apply_dup dup false 1
+        in
+        let a = Array.make (n_profs + Bool.to_int looped) resampled_hd in
+        for i = 1 to n_profs - 1 do
+          a.(i)
+            <- ( match get_mapping (i - 1) with
+                 | `Direct sampling -> Array.of_list @@ resample n sampling profs.(i)
+                 | (`FastDistance | `DirectTangent) as dup -> apply_dup dup true i )
+        done;
+        if looped
+        then (
+          match get_mapping (n_profs - 1) with
+          | `Direct _ -> ()
+          | (`FastDistance | `DirectTangent) as dup ->
+            a.(n_profs) <- apply_dup dup false 0 );
+        a )
     in
-    let f (i, acc) rows =
-      let endcaps =
-        match bot_cap, top_cap with
-        | true, true when i = 0 && i = len_sliced - 1 -> `Both
-        | true, _ when i = 0 -> `Bot
-        | _, true when i = len_sliced - 1 -> `Top
-        | _ -> `None
+    let layers =
+      let n_profs = Array.length matched
+      and n_bezs = Array.length matched.(0) in
+      let bezs =
+        let f i =
+          Bezier3.of_path ?size ?tangents (List.init n_profs (fun j -> matched.(j).(i)))
+        in
+        Array.init n_bezs f
       in
-      i + 1, Mesh0.of_rows ~style ~endcaps rows :: acc
+      let s = 1. /. Float.of_int fn in
+      let f i = List.init n_bezs (fun j -> bezs.(j) (Float.of_int i *. s)) in
+      List.init fn f
     in
-    Mesh0.join @@ snd @@ List.fold_left f (0, []) sliced
+    Mesh0.of_rows ~style ~endcaps layers
