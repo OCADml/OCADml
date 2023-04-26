@@ -240,10 +240,13 @@ let skline
      that this is the behaviour in the doc comment)
         *)
         let last_duped =
-          let duplicating = not @@ is_direct (get_mapping (n_profs - 1)) in
-          if looped && duplicating
-          then ref (Some (get_prof_len (n_profs - 1) > get_prof_len 0))
-          else if duplicating
+          if looped && (not @@ is_direct (get_mapping (n_profs - 1)))
+          then
+            ref
+              (Some
+                 ( get_prof_len (n_profs - 1) > get_prof_len 0
+                   || get_prof_len 1 > get_prof_len 0 ) )
+          else if not @@ is_direct (get_mapping 0)
           then ref (Some (get_prof_len 1 > get_prof_len 0))
           else ref None
         in
@@ -261,7 +264,8 @@ let skline
         let apply_dup kind s j =
           let i = Util.index_wrap ~len:n_profs (j - 1)
           and j = Util.index_wrap ~len:n_profs j in
-          let get = if s then snd else fst
+          (* let get = if s then snd else fst *)
+          let get = if s then snd else snd
           and a, b = if s then j, i else i, j in
           let dup =
             if prof_lens.(a) >= prof_lens.(b)
@@ -301,6 +305,7 @@ let skline
           Bezier3.of_path ?size ?tangents (List.init n_profs (fun j -> matched.(j).(i))) )
       in
       let s = 1. /. Float.of_int fn in
-      List.init fn (fun i -> List.init n_bezs (fun j -> bezs.(j) (Float.of_int i *. s)))
+      List.init (fn + 1) (fun i ->
+        List.init n_bezs (fun j -> bezs.(j) (Float.of_int i *. s)) )
     in
     Mesh0.of_rows ~style ~endcaps layers

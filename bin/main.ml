@@ -1,7 +1,5 @@
 open! OCADml
 
-let () = print_endline "hello"
-
 let profiles =
   let fn = 64
   and up h = Path3.translate (v3 0. 0. h) in
@@ -48,3 +46,14 @@ let () =
   and tangents = `Tangents [ up; up; v3 1. 0. 0.; V3.neg up; V3.neg up ] in
   Mesh.to_stl "skline_test3.stl"
   @@ Mesh.skline ~fn:200 ~size:(`Flat (`Rel 0.5)) ~tangents profs
+
+let () =
+  let circ = Path3.circle ~fn:10 5.
+  and pent = Path3.circle ~fn:5 5. in
+  (* let profs = Path3.[ pent; ztrans 10. circ; ztrans 20. pent ] *)
+  let profs = Path3.[ pent; ztrans 20. circ ]
+  (* and mapping = `Mix [ `DirectTangent; `DirectTangent ] in *)
+  (* and mapping = `Mix [ `FastDistance; `FastDistance ] in *)
+  and mapping = `Mix [ `DirectTangent ] in
+  Mesh.to_stl "skline_test4.stl"
+  @@ Mesh.skline ~mapping ~fn:100 ~size:(`Flat (`Rel 0.01)) profs
