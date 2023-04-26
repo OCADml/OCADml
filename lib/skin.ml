@@ -176,133 +176,42 @@ let skline
   ?(style = `MinEdge)
   ?(endcaps = `Both)
   ?refine
-  ?(mapping = `Flat (`Direct `ByLen))
-  ?(fn = 36)
+  ?(sampling = `Flat `ByLen)
+  ?(fn = 64)
   ?size
   ?tangents
   = function
-  | [] | [ _ ] -> invalid_arg "At least two profiles are required to skin."
+  | [] | [ _ ] -> invalid_arg "At least two profiles are required to skline."
   | profs ->
     let refine = Option.bind refine (fun n -> if n > 1 then Some n else None)
-    and looped =
+    and closed =
       match endcaps with
       | `Loop -> true
       | _ -> false
     and resample n s = Path3.subdivide ~closed:true ~freq:(`N (n, s))
     and profs = Array.of_list profs in
     let n_profs = Array.length profs in
-    let n_transitions = n_profs - if looped then 0 else 1 in
+    let n_transitions = n_profs - if closed then 0 else 1 in
     let prof_lens = Array.map List.length profs in
-    let get_mapping = Util.getter ~len:n_transitions ~name:"mapping" mapping
+    let get_sampling = Util.getter ~len:n_transitions ~name:"sampling" sampling
     and n =
       let max = Array.fold_left (fun mx len -> Int.max len mx) 0 prof_lens in
       Util.value_map_opt ~default:max (fun r -> r * max) refine
-    and all_resamplers =
-      match mapping with
-      | `Flat (`Direct _) -> true
-      | `Mix l -> List.for_all is_direct l
-      | _ -> false
-    and get_prof_len i = prof_lens.(Util.index_wrap ~len:n_profs i) in
-    let matched =
-      if all_resamplers
-      then (
-        (* there are no duplicators, so all profiles can be handled together. *)
-        let unpack_sampling i =
-          match get_mapping i with
-          | `Direct sampling -> sampling
-          | _ -> failwith "impossible"
-        in
-        let resampled_hd = Array.of_list @@ resample n (unpack_sampling 0) profs.(0) in
-        let a = Array.make (n_profs + Bool.to_int looped) resampled_hd in
-        for i = 1 to n_profs - 1 do
-          a.(i) <- Array.of_list @@ resample n (unpack_sampling (i - 1)) profs.(i)
-        done;
-        a )
-      else (
-        (* TODO:
-   The constraints of skline with duplicators are:
-   - if the first of a pair has points added to match up with the second
-     the second cannot have its point count change during the next
-     pairing (via duplication or sampling).
-   - the next pair could have its second part change to match with the
-     second of the first
-   - thus, a general rule is two profiles in a row can't have their
-     point counts change (the next must be a profile that is equal to or
-     greater than the number of points than the one following it)
-   - when looping, the final version of the first profile must be
-     identical, such that Bezier3.of_path can be called with ~closed:true
-   - NOTE: the larger path of a pair is actually reindexed by point rotation by
-     duplicators (except in aligned_distance_match which assumes that they are
-     already lined up -- there is no aligned version of tangent_match
-     unfortunately).
-   - therefore, the above mentioned constraints are not adequate. I need to
-     ignore the reindexed big profile returned by tangent_match (and make a note
-     that this is the behaviour in the doc comment)
-        *)
-        let last_duped =
-          if looped && (not @@ is_direct (get_mapping (n_profs - 1)))
-          then
-            ref
-              (Some
-                 ( get_prof_len (n_profs - 1) > get_prof_len 0
-                   || get_prof_len 1 > get_prof_len 0 ) )
-          else if not @@ is_direct (get_mapping 0)
-          then ref (Some (get_prof_len 1 > get_prof_len 0))
-          else ref None
-        in
-        for i = 1 to n_profs - 2 do
-          if not @@ is_direct (get_mapping (i - 1))
-          then (
-            let duped = get_prof_len (i - 1) > get_prof_len i in
-            if duped
-               && Option.value ~default:false !last_duped
-               && get_prof_len i < get_prof_len (i + 1)
-            then invalid_arg "skline: same profile cannot be duplicated twice";
-            last_duped := Some duped )
-          else last_duped := None
-        done;
-        let apply_dup kind s j =
-          let i = Util.index_wrap ~len:n_profs (j - 1)
-          and j = Util.index_wrap ~len:n_profs j in
-          (* let get = if s then snd else fst *)
-          let get = if s then snd else snd
-          and a, b = if s then j, i else i, j in
-          let dup =
-            if prof_lens.(a) >= prof_lens.(b)
-            then profs.(a)
-            else (
-              match kind with
-              | `FastDistance -> get @@ Path3.aligned_distance_match profs.(b) profs.(a)
-              | `DirectTangent -> get @@ Path3.tangent_match profs.(b) profs.(a) )
-          in
-          Array.of_list @@ resample n `BySeg dup
-        in
-        let resampled_hd =
-          match get_mapping 0 with
-          | `Direct sampling -> Array.of_list @@ resample n sampling profs.(0)
-          | (`FastDistance | `DirectTangent) as dup -> apply_dup dup false 1
-        in
-        let a = Array.make (n_profs + Bool.to_int looped) resampled_hd in
-        for i = 1 to n_profs - 1 do
-          a.(i)
-            <- ( match get_mapping (i - 1) with
-                 | `Direct sampling -> Array.of_list @@ resample n sampling profs.(i)
-                 | (`FastDistance | `DirectTangent) as dup -> apply_dup dup true i )
-        done;
-        if looped
-        then (
-          match get_mapping (n_profs - 1) with
-          | `Direct _ -> ()
-          | (`FastDistance | `DirectTangent) as dup ->
-            a.(n_profs) <- apply_dup dup false 0 );
-        a )
+    in
+    let resampled =
+      let a = Array.(make n_profs (of_list @@ resample n (get_sampling 0) profs.(0))) in
+      for i = 1 to n_profs - 1 do
+        a.(i) <- Array.of_list @@ resample n (get_sampling (i - 1)) profs.(i)
+      done;
+      a
     in
     let layers =
-      let n_profs = Array.length matched
-      and n_bezs = Array.length matched.(0) in
+      let n_profs = Array.length resampled
+      and n_bezs = Array.length resampled.(0) in
       let bezs =
         Array.init n_bezs (fun i ->
-          Bezier3.of_path ?size ?tangents (List.init n_profs (fun j -> matched.(j).(i))) )
+          let path = List.init n_profs (fun j -> resampled.(j).(i)) in
+          Bezier3.of_path ~closed ?size ?tangents path )
       in
       let s = 1. /. Float.of_int fn in
       List.init (fn + 1) (fun i ->

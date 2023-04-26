@@ -27,8 +27,7 @@ let () =
       ; xtrans 30. (yrot Float.pi pent)
       ]
   in
-  Mesh.to_stl "skline_test2.stl"
-  @@ Mesh.skline ~mapping:(`Flat (`Direct `ByLen)) ~fn:100 ~size:(`Flat (`Rel 0.05)) profs
+  Mesh.to_stl "skline_test2.stl" @@ Mesh.skline ~fn:100 ~size:(`Flat (`Rel 0.05)) profs
 
 let () =
   let circ = Path3.circle ~fn:64 5. in
@@ -48,12 +47,15 @@ let () =
   @@ Mesh.skline ~fn:200 ~size:(`Flat (`Rel 0.5)) ~tangents profs
 
 let () =
-  let circ = Path3.circle ~fn:10 5.
-  and pent = Path3.circle ~fn:5 5. in
-  (* let profs = Path3.[ pent; ztrans 10. circ; ztrans 20. pent ] *)
-  let profs = Path3.[ pent; ztrans 20. circ ]
-  (* and mapping = `Mix [ `DirectTangent; `DirectTangent ] in *)
-  (* and mapping = `Mix [ `FastDistance; `FastDistance ] in *)
-  and mapping = `Mix [ `DirectTangent ] in
+  let circ = Path3.circle ~fn:64 5. in
+  let pent = Path3.(circle ~fn:5 5.) in
+  let profs =
+    Path3.
+      [ circ
+      ; translate (v3 15. 0. 20.) (yrot (Float.pi /. 2.) pent)
+      ; xtrans 30. (yrot Float.pi circ)
+      ; translate (v3 15. 0. (-20.)) (yrot (Float.pi *. 1.5) pent)
+      ]
+  in
   Mesh.to_stl "skline_test4.stl"
-  @@ Mesh.skline ~mapping ~fn:100 ~size:(`Flat (`Rel 0.01)) profs
+  @@ Mesh.skline ~endcaps:`Loop ~fn:200 ~size:(`Flat (`Rel 0.1)) profs

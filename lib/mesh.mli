@@ -281,14 +281,26 @@ val skin_between
   -> Path3.t
   -> t
 
+(** [skline ?style ?endcaps ?refine ?sampling ?fn ?size ?tangents profiles]
+
+    Create a mesh bound by bezier splines passing through the paths formed by
+    the points of [profiles] -- closed, ideally coplanar (though some slight
+    variation can be ok) paths. Unlike this functions linear counterpart
+    {!skin}, only direct mapping (vertex associations are already handled by the
+    user, as determined by the start index of each profile) is available, though
+    [?sampling] is provided to give control over whether points are added by
+    segment or by length when resampling (default [`ByLen]).
+
+    - [fn] sets the number of segments to be sampled from the splines (default [64])
+    - [refine] can be specified to apply additional upsampling which may help
+      to improve the smoothness of the resulting mesh. Uses {!Path3.subdivide}
+      with the sampling frequency indicated by [sampling].
+    - see {!Bezier3.of_path} for notes on [?size] and [?tangents] *)
 val skline
   :  ?style:style
   -> ?endcaps:endcaps
   -> ?refine:int
-  -> ?mapping:
-       [ `Flat of [ `Direct of [ `ByLen | `BySeg ] | `FastDistance | `DirectTangent ]
-       | `Mix of [ `Direct of [ `ByLen | `BySeg ] | `FastDistance | `DirectTangent ] list
-       ]
+  -> ?sampling:[ `Flat of [ `ByLen | `BySeg ] | `Mix of [ `ByLen | `BySeg ] list ]
   -> ?fn:int
   -> ?size:
        [ `Abs of float list
