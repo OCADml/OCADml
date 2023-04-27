@@ -618,3 +618,50 @@ let to_stl ~rev path { points = pts; faces } =
 let to_stl ?(ascii = false) ?(rev = true) ?eps path t =
   let t = merge_points ?eps t in
   if ascii then to_stl ~rev path t else to_binstl ~rev path t
+
+let of_stl ?(ascii = true) ?(rev = true) ?eps path =
+  if not ascii then failwith "binstl read not yet impletmented";
+  let validate_line ic prefix =
+    match In_channel.input_line ic with
+    | Some line ->
+      if not @@ String.(starts_with ~prefix @@ trim line)
+      then failwith (Printf.sprintf "Invalid block tag in ascii stl (expected %s)" prefix)
+    | None ->
+      failwith (Printf.sprintf "Unexpected end of ascii stl (expected %s line)" prefix)
+  in
+  let read_vertex ic =
+    match In_channel.input_line ic with
+    | Some line ->
+      ( try
+          let[@warning "-partial-match"] [ "vertex"; x; y; z ] =
+            String.(split_on_char ' ' @@ trim line)
+          in
+          Float.(V3.v (of_string x) (of_string y) (of_string z))
+        with
+        | _ -> failwith "Invalid vertex encountered in ascii stl." )
+    | None -> failwith "Unexpected end of ascii stl file."
+  in
+  let rec loop ic i ps tris =
+    match In_channel.input_line ic with
+    | Some line ->
+      let line = String.trim line in
+      if String.starts_with ~prefix:"endsolid" line
+      then ps, tris
+      else if String.starts_with ~prefix:"facet" line
+      then (
+        (* ignoring normal which comes after facet *)
+        validate_line ic "outer loop";
+        let a = read_vertex ic
+        and b = read_vertex ic
+        and c = read_vertex ic in
+        let tri = if rev then i + 2, i + 1, i else i, i + 1, i + 2 in
+        validate_line ic "endloop";
+        validate_line ic "endfacet";
+        loop ic (i + 3) (c :: b :: a :: ps) (tri :: tris) )
+      else failwith "Invalid block tag in ascii stl (expected facet)."
+    | None -> failwith "Unexpected end of ascii stl (expected facet or end of solid)"
+  in
+  In_channel.with_open_bin path (fun ic ->
+    validate_line ic "solid";
+    let ps, faces = loop ic 0 [] [] in
+    merge_points ?eps { points = Util.array_of_list_rev ps; faces } )
