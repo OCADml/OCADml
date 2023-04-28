@@ -942,14 +942,13 @@ val mirror : V3.t -> t -> t
     serialization, however this can be avoided by setting [~rev:false]. *)
 val to_stl : ?ascii:bool -> ?rev:bool -> string -> t -> unit
 
-(** [of_stl ?ascii ?rev ?eps path]
+(** [of_stl ?rev ?eps path]
     Load a mesh from the {{:https://en.wikipedia.org/wiki/STL_(file_format)}
-    stl} file at [path]. The stl is assumed to be in binary format by
-    default, but [ascii] deserialization is also available.
+    stl} file at [path] (both binary and ascii encodings are supported).
 
     - [eps] can be provided to control the precision of point
       de-duplication/merge operation performed after loading (default is [1e-6])
     - facets are reversed by default during deserialization to counter the
       default reversal performed by {!to_stl}, however this can be avoided by
       setting [~rev:false]. *)
-val of_stl : ?ascii:bool -> ?rev:bool -> ?eps:float -> string -> t
+val of_stl : ?rev:bool -> ?eps:float -> string -> t

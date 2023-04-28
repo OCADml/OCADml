@@ -626,7 +626,7 @@ let to_stl ~rev path { points = pts; faces } =
 let to_stl ?(ascii = false) ?(rev = true) path t =
   if ascii then to_stl ~rev path t else to_binstl ~rev path t
 
-let of_binstl ?(rev = true) ?eps path =
+let of_binstl_ic ?(rev = true) ?eps ic =
   let read_unsigned_long ic =
     let ch1 = input_byte ic
     and ch2 = input_byte ic
@@ -657,14 +657,15 @@ let of_binstl ?(rev = true) ?eps path =
       loop ic n_facets (i + 1) (pos + 50) (c :: b :: a :: ps) (tri :: tris) )
     else ps, tris
   in
-  In_channel.with_open_bin path (fun ic ->
-    In_channel.seek ic (Int64.of_int 80);
-    let n_facets = Int32.to_int @@ read_unsigned_long ic in
-    (* header 80 bytes + 4 bytes for n_facets -> position 84 *)
-    let ps, faces = loop ic n_facets 0 84 [] [] in
-    merge_points ?eps { points = Util.array_of_list_rev ps; faces } )
+  In_channel.seek ic (Int64.of_int 80);
+  let n_facets = Int32.to_int @@ read_unsigned_long ic in
+  if Int64.(In_channel.length ic <> of_int ((n_facets * 50) + 84))
+  then failwith "Invalid binary stl (file size <> facets * 50 + 84)";
+  (* header 80 bytes + 4 bytes for n_facets -> position 84 *)
+  let ps, faces = loop ic n_facets 0 84 [] [] in
+  merge_points ?eps { points = Util.array_of_list_rev ps; faces }
 
-let of_stl ?(rev = true) ?eps path =
+let of_asciistl_ic ?(rev = true) ?eps ic =
   let validate_line ic prefix =
     match In_channel.input_line ic with
     | Some line ->
@@ -705,10 +706,19 @@ let of_stl ?(rev = true) ?eps path =
       else failwith "Invalid block tag in ascii stl (expected facet)."
     | None -> failwith "Unexpected end of ascii stl (expected facet or end of solid)"
   in
-  In_channel.with_open_bin path (fun ic ->
-    validate_line ic "solid";
-    let ps, faces = loop ic 0 [] [] in
-    merge_points ?eps { points = Util.array_of_list_rev ps; faces } )
+  In_channel.seek ic (Int64.of_int 0);
+  validate_line ic "solid";
+  let ps, faces = loop ic 0 [] [] in
+  merge_points ?eps { points = Util.array_of_list_rev ps; faces }
 
-let of_stl ?(ascii = false) ?rev ?eps path =
-  if ascii then of_stl ?rev ?eps path else of_binstl ?rev ?eps path
+let of_stl ?rev ?eps path =
+  let is_ascii ic =
+    match In_channel.input_line ic with
+    | Some line when String.(starts_with ~prefix:"solid " @@ trim line) ->
+      ( match In_channel.input_line ic with
+        | Some line -> String.(starts_with ~prefix:"facet " @@ trim line)
+        | _ -> false )
+    | _ -> false
+  in
+  In_channel.with_open_bin path (fun ic ->
+    if is_ascii ic then of_asciistl_ic ?rev ?eps ic else of_binstl_ic ?rev ?eps ic )

@@ -61,7 +61,10 @@ let () =
   @@ Mesh.skline ~endcaps:`Loop ~fn:200 ~size:(`Flat (`Rel 0.1)) profs
 
 let () =
-  let cyl = Mesh.extrude ~height:2. (Poly2.circle 5.) in
+  let cyl = Mesh.extrude ~height:2. (Poly2.circle ~fn:36 5.) in
   Mesh.to_stl "bin_cyl.stl" cyl;
-  let loaded = Mesh.of_stl "bin_cyl.stl" in
-  Mesh.to_stl "loaded_bin_cyl.stl" loaded
+  Mesh.to_stl "ascii_cyl.stl" cyl;
+  let loaded_bin = Mesh.of_stl "bin_cyl.stl"
+  and loaded_ascii = Mesh.of_stl "ascii_cyl.stl" in
+  Mesh.to_stl "loaded_bin_cyl.stl" loaded_bin;
+  Mesh.to_stl "loaded_ascii_cyl.stl" loaded_ascii

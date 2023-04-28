@@ -73,7 +73,9 @@ let skin
       | `Bot -> false, true, false
       | `Top -> false, false, true
       | `None -> false, false, false
-    and resample n s = Path3.subdivide ~closed:true ~freq:(`N (n, s))
+    and resample n s = function
+      | [ hd ] -> List.init n (fun _ -> hd) (* single point "cone" layer *)
+      | path -> Path3.subdivide ~closed:true ~freq:(`N (n, s)) path
     and profs = Array.of_list profs in
     let n_profs = Array.length profs in
     let n_transitions = n_profs - if looped then 0 else 1 in
@@ -188,7 +190,9 @@ let skline
       match endcaps with
       | `Loop -> true
       | _ -> false
-    and resample n s = Path3.subdivide ~closed:true ~freq:(`N (n, s))
+    and resample n s = function
+      | [ hd ] -> List.init n (fun _ -> hd) (* single point "cone" layer *)
+      | path -> Path3.subdivide ~closed:true ~freq:(`N (n, s)) path
     and profs = Array.of_list profs in
     let n_profs = Array.length profs in
     let n_transitions = n_profs - if closed then 0 else 1 in
