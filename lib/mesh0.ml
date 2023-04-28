@@ -186,16 +186,24 @@ let of_rows
       let faces = loop [] 0 0
       and bottom_cap () =
         let bot = List.hd layers in
-        let proj = Plane.project (Path3.to_plane ~no_check:true bot) in
-        let a = Util.array_of_list_map proj bot in
-        Triangulate.triangulate ~rev:(not rev) a
+        let hd = List.hd bot in
+        if List.for_all (V3.equal hd) bot
+        then []
+        else (
+          let proj = Plane.project (Path3.to_plane ~no_check:true bot) in
+          let a = Util.array_of_list_map proj bot in
+          Triangulate.triangulate ~rev:(not rev) a )
       and top_cap () =
         let offset = n_facets * (n_layers - 1)
         and top = List.nth layers (n_layers - 1) in
-        let proj = Plane.project (Path3.to_plane ~no_check:true top) in
-        let a = Util.array_of_list_map proj top in
-        let f = if rev then Util.offset_tri_rev else Util.offset_tri in
-        List.map (f offset) (Triangulate.triangulate a)
+        let hd = List.hd top in
+        if List.for_all (V3.equal hd) top
+        then []
+        else (
+          let proj = Plane.project (Path3.to_plane ~no_check:true top) in
+          let a = Util.array_of_list_map proj top in
+          let f = if rev then Util.offset_tri_rev else Util.offset_tri in
+          List.map (f offset) (Triangulate.triangulate a) )
       in
       match endcaps with
       | `Both -> List.concat [ top_cap (); bottom_cap (); faces ]
@@ -615,8 +623,7 @@ let to_stl ~rev path { points = pts; faces } =
   in
   Out_channel.with_open_bin path f
 
-let to_stl ?(ascii = false) ?(rev = true) ?eps path t =
-  let t = merge_points ?eps t in
+let to_stl ?(ascii = false) ?(rev = true) path t =
   if ascii then to_stl ~rev path t else to_binstl ~rev path t
 
 let of_stl ?(ascii = true) ?(rev = true) ?eps path =

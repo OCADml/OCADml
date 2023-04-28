@@ -19,15 +19,17 @@ let () =
   and pent = Path3.circle ~fn:5 5. in
   let profs =
     Path3.
-      [ pent
+      [ List.init 32 (fun _ -> v3 0. 0. (-3.))
+      ; pent
       ; ztrans 6. pent
       ; translate (v3 12.5 0. 20.) (yrot (Float.pi /. 2.) circ)
       ; translate (v3 17.5 0. 20.) (yrot (Float.pi /. 2.) circ)
       ; translate (v3 30. 0. 6.) (yrot Float.pi pent)
       ; xtrans 30. (yrot Float.pi pent)
+      ; List.init 32 (fun _ -> v3 30. 0. (-3.))
       ]
   in
-  Mesh.to_stl "skline_test2.stl" @@ Mesh.skline ~fn:100 ~size:(`Flat (`Rel 0.05)) profs
+  Mesh.to_stl "skline_test2.stl" @@ Mesh.skline ~fn:200 ~size:(`Flat (`Rel 0.05)) profs
 
 let () =
   let circ = Path3.circle ~fn:64 5. in

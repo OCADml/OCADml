@@ -942,6 +942,6 @@ val mirror : V3.t -> t -> t
     opposite direction expected by other programs with which you may want to
     use the output [stl]. Thus facets are reversed by default during
     serialization, however this can be avoided by setting [~rev:false]. *)
-val to_stl : ?ascii:bool -> ?rev:bool -> ?eps:float -> string -> t -> unit
+val to_stl : ?ascii:bool -> ?rev:bool -> string -> t -> unit
 
 val of_stl : ?ascii:bool -> ?rev:bool -> ?eps:float -> string -> t
