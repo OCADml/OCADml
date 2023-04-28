@@ -927,7 +927,7 @@ val yscale : float -> t -> t
 val zscale : float -> t -> t
 val mirror : V3.t -> t -> t
 
-(** {1 Output} *)
+(** {1 IO} *)
 
 (** [to_stl ?ascii ?rev path t]
 
