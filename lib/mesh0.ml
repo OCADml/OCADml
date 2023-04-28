@@ -703,9 +703,13 @@ let of_asciistl_ic ?(rev = true) ?eps ic =
         validate_line ic "endloop";
         validate_line ic "endfacet";
         loop ic (i + 3) (c :: b :: a :: ps) (tri :: tris) )
+      else if String.length line = 0
+      then loop ic i ps tris
       else failwith "Invalid block tag in ascii stl (expected facet)."
     | None -> failwith "Unexpected end of ascii stl (expected facet or end of solid)"
   in
+  if In_channel.length ic < Int64.of_int 15
+  then failwith "File too short to be a valid ascii stl (< 15 bytes)";
   In_channel.seek ic (Int64.of_int 0);
   validate_line ic "solid";
   let ps, faces = loop ic 0 [] [] in
