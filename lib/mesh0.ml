@@ -552,12 +552,12 @@ let mirror ax t = rev_faces { t with points = Array.map (V3.mirror ax) t.points 
 
 let to_binstl ~rev path { points = pts; faces } =
   let write_unsigned_long oc n =
-    Out_channel.output_byte oc ((n lsr 0) land 0xFF);
-    Out_channel.output_byte oc ((n lsr 8) land 0xFF);
-    Out_channel.output_byte oc ((n lsr 16) land 0xFF);
-    Out_channel.output_byte oc ((n lsr 24) land 0xFF)
+    Out_channel.output_byte oc Int32.(to_int n lsr 0);
+    Out_channel.output_byte oc Int32.(to_int n lsr 8);
+    Out_channel.output_byte oc Int32.(to_int n lsr 16);
+    Out_channel.output_byte oc Int32.(to_int @@ shift_right_logical n 24)
   in
-  let write_float oc n = write_unsigned_long oc Int32.(to_int @@ bits_of_float n) in
+  let write_float oc n = write_unsigned_long oc (Int32.bits_of_float n) in
   let write_v3 oc p =
     write_float oc @@ V3.x p;
     write_float oc @@ V3.y p;
@@ -571,7 +571,7 @@ let to_binstl ~rev path { points = pts; faces } =
     Bytes.set bs 79 '\n';
     Out_channel.output_bytes oc bs;
     (* number of facets *)
-    write_unsigned_long oc (List.length faces);
+    write_unsigned_long oc (Int32.of_int @@ List.length faces);
     List.iter
       (fun (a, b, c) ->
         let a, b, c =
@@ -626,8 +626,45 @@ let to_stl ~rev path { points = pts; faces } =
 let to_stl ?(ascii = false) ?(rev = true) path t =
   if ascii then to_stl ~rev path t else to_binstl ~rev path t
 
-let of_stl ?(ascii = true) ?(rev = true) ?eps path =
-  if not ascii then failwith "binstl read not yet impletmented";
+let of_binstl ?(rev = true) ?eps path =
+  let read_unsigned_long ic =
+    let ch1 = input_byte ic
+    and ch2 = input_byte ic
+    and ch3 = input_byte ic
+    and big = Int32.shift_left (Int32.of_int (input_byte ic)) 24 in
+    let base = Int32.of_int (ch1 lor (ch2 lsl 8) lor (ch3 lsl 16)) in
+    Int32.logor base big
+  in
+  let read_float ic = Int32.float_of_bits (read_unsigned_long ic) in
+  let read_vertex ic =
+    let x = read_float ic
+    and y = read_float ic
+    and z = read_float ic in
+    V3.v x y z
+  in
+  let rec loop ic n_facets i pos ps tris =
+    if i < n_facets
+    then (
+      (* skip over normal *)
+      In_channel.seek ic (Int64.of_int (pos + 12));
+      let a = read_vertex ic
+      and b = read_vertex ic
+      and c = read_vertex ic in
+      (* normal + verts = 48, skip over 2 \000 property bytes to 50 *)
+      In_channel.seek ic (Int64.of_int (pos + 50));
+      let j = i * 3 in
+      let tri = if rev then j + 2, j + 1, j else j, j + 1, j + 2 in
+      loop ic n_facets (i + 1) (pos + 50) (c :: b :: a :: ps) (tri :: tris) )
+    else ps, tris
+  in
+  In_channel.with_open_bin path (fun ic ->
+    In_channel.seek ic (Int64.of_int 80);
+    let n_facets = Int32.to_int @@ read_unsigned_long ic in
+    (* header 80 bytes + 4 bytes for n_facets -> position 84 *)
+    let ps, faces = loop ic n_facets 0 84 [] [] in
+    merge_points ?eps { points = Util.array_of_list_rev ps; faces } )
+
+let of_stl ?(rev = true) ?eps path =
   let validate_line ic prefix =
     match In_channel.input_line ic with
     | Some line ->
@@ -672,3 +709,6 @@ let of_stl ?(ascii = true) ?(rev = true) ?eps path =
     validate_line ic "solid";
     let ps, faces = loop ic 0 [] [] in
     merge_points ?eps { points = Util.array_of_list_rev ps; faces } )
+
+let of_stl ?(ascii = false) ?rev ?eps path =
+  if ascii then of_stl ?rev ?eps path else of_binstl ?rev ?eps path
