@@ -366,10 +366,10 @@ module Make (V : V.S) = struct
     extrapolate
 
   let bezpath_of_path
-      ?(closed = false)
-      ?(size = `Flat (`Rel 0.1))
-      ?(tangents = `NonUniform)
-      path
+    ?(closed = false)
+    ?(size = `Flat (`Rel 0.1))
+    ?(tangents = `NonUniform)
+    path
     =
     let ps = Array.of_list path
     and get_size =
@@ -392,8 +392,8 @@ module Make (V : V.S) = struct
         let ss = Array.of_list ss in
         fun i seg_len ->
           ( match Array.unsafe_get ss i with
-          | `Rel s -> seg_len *. s
-          | `Abs s -> s )
+            | `Rel s -> seg_len *. s
+            | `Abs s -> s )
       | _ -> invalid_arg "Size must be greater than zero."
     and power_poly =
       let m =
@@ -403,9 +403,9 @@ module Make (V : V.S) = struct
     in
     let tangents =
       ( match tangents with
-      | `Tangents tangents -> List.map V.normalize tangents
-      | `NonUniform -> P.tangents ~uniform:false ~closed path
-      | `Uniform -> P.tangents ~uniform:true ~closed path )
+        | `Tangents tangents -> List.map V.normalize tangents
+        | `NonUniform -> P.tangents ~uniform:false ~closed path
+        | `Uniform -> P.tangents ~uniform:true ~closed path )
       |> Array.of_list
     in
     let len_ps = Array.length ps

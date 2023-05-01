@@ -7,8 +7,8 @@ let lerp a b u = if u = 0. then a else if u = 1. then b else ((1. -. u) *. a) +.
 let lerpn ?(endpoint = true) a b n =
   let d = Float.of_int @@ if endpoint then Int.max 1 (n - 1) else n in
   List.init n (fun i ->
-      let u = Float.of_int i /. d in
-      lerp a b u )
+    let u = Float.of_int i /. d in
+    lerp a b u )
 
 let quant ~q v = Float.floor ((v /. q) +. 0.5) *. q
 let quant_down ~q v = Float.floor (v /. q) *. q
@@ -68,7 +68,7 @@ let poly_trim_head p =
   done;
   match !first with
   | Some first -> Array.init (len - first) (fun i -> p.(i + first))
-  | None       -> [| 0. |]
+  | None -> [| 0. |]
 
 (* Removes the leading and trailing zero terms of a polynomial. *)
 let poly_trim_head_tail p =
@@ -83,7 +83,7 @@ let poly_trim_head_tail p =
   done;
   match !first, !last with
   | Some first, Some last -> Array.init (last - first + 1) (fun i -> p.(i + first))
-  | _                     -> [| 0. |]
+  | _ -> [| 0. |]
 
 (* Evaluates the real polynomial p at the real input value z. *)
 let polynomial_real p z =
@@ -112,7 +112,7 @@ let poly_roots ?(tol = 1e-14) p =
     let p_deriv = Array.init n (fun i -> p.(i) *. Float.of_int (n - i)) in
     let s =
       Array.init (n + 1) (fun i ->
-          Float.abs p.(i) *. ((4. *. Float.of_int (n - i)) +. 1.) )
+        Float.abs p.(i) *. ((4. *. Float.of_int (n - i)) +. 1.) )
     and beta = -.p1 /. p0 /. Float.of_int n in
     let z =
       let r =
@@ -122,7 +122,7 @@ let poly_roots ?(tol = 1e-14) p =
       let f i =
         let angle = Float.((pi *. 2. *. (of_int i /. of_int n)) +. (1.5 /. of_int n)) in
         Complex.(
-          add { re = beta; im = 0. } Float.{ re = cos angle *. r; im = sin angle *. r })
+          add { re = beta; im = 0. } Float.{ re = cos angle *. r; im = sin angle *. r } )
       in
       Array.init n f
     in
@@ -160,7 +160,7 @@ let poly_roots ?(tol = 1e-14) p =
         and denom =
           Float.abs
             ( Complex.norm (polynomial_complex p_deriv xi)
-            -. (tol *. polynomial_real s (Complex.norm xi)) )
+              -. (tol *. polynomial_real s (Complex.norm xi)) )
         in
         Float.of_int n *. num /. denom
       in
@@ -176,7 +176,7 @@ let real_roots ?eps ?(tol = 1e-14) p =
     | Some eps ->
       fun (_, acc) (Complex.{ re; im } as z) ->
         if Float.abs im /. (1. +. Complex.norm z) < eps then 0, re :: acc else 0, acc
-    | None     ->
+    | None ->
       fun (i, acc) Complex.{ re; im } ->
         if Float.abs im <= errors.(i) then i + 1, re :: acc else i + 1, acc
   in

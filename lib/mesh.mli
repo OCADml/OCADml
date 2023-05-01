@@ -281,6 +281,37 @@ val skin_between
   -> Path3.t
   -> t
 
+(** [skline ?style ?endcaps ?refine ?sampling ?fn ?size ?tangents profiles]
+
+    Create a mesh bound by bezier splines passing through the paths formed by
+    the points of [profiles] -- closed, ideally coplanar (though some slight
+    variation can be ok) paths. Unlike this functions linear counterpart
+    {!skin}, only direct mapping (vertex associations are already handled by the
+    user, as determined by the start index of each profile) is available, though
+    [?sampling] is provided to give control over whether points are added by
+    segment or by length when resampling (default [`ByLen]).
+
+    - [fn] sets the number of segments to be sampled from the splines (default [64])
+    - [refine] can be specified to apply additional upsampling which may help
+      to improve the smoothness of the resulting mesh. Uses {!Path3.subdivide}
+      with the sampling frequency indicated by [sampling].
+    - see {!Bezier3.of_path} for notes on [?size] and [?tangents] *)
+val skline
+  :  ?style:style
+  -> ?endcaps:endcaps
+  -> ?refine:int
+  -> ?sampling:[ `Flat of [ `ByLen | `BySeg ] | `Mix of [ `ByLen | `BySeg ] list ]
+  -> ?fn:int
+  -> ?size:
+       [ `Abs of float list
+       | `Rel of float list
+       | `Flat of [ `Abs of float | `Rel of float ]
+       | `Mix of [ `Abs of float | `Rel of float ] list
+       ]
+  -> ?tangents:[ `NonUniform | `Uniform | `Tangents of V3.t list ]
+  -> Path3.t list
+  -> t
+
 (** {1 Sweeps, extrusions, and morphs with roundovers}
 
 Sweeps, extrusions and morphs from 2d to 3d. Each of which can be given rounded
@@ -896,19 +927,28 @@ val yscale : float -> t -> t
 val zscale : float -> t -> t
 val mirror : V3.t -> t -> t
 
-(** {1 Output} *)
+(** {1 IO} *)
 
-(** [to_stl ?ascii ?rev ?eps path t]
+(** [to_stl ?ascii ?rev path t]
 
     Write the mesh [t] to disk at [path] as an
     {{:https://en.wikipedia.org/wiki/STL_(file_format)} stl}. Binary serialization
     is performed by default, but the [ascii] format is also available.
 
-    - [eps] can be provided to control the precision of point deduplication and face
-    triangulation operations required befor export (default is [1e-6])
     - As OCADml meshes ({!type:t}) are typically generated to follow the CCW
     inner face convention of OpenSCAD, this can result in normals pointing the
     opposite direction expected by other programs with which you may want to
     use the output [stl]. Thus facets are reversed by default during
     serialization, however this can be avoided by setting [~rev:false]. *)
-val to_stl : ?ascii:bool -> ?rev:bool -> ?eps:float -> string -> t -> unit
+val to_stl : ?ascii:bool -> ?rev:bool -> string -> t -> unit
+
+(** [of_stl ?rev ?eps path]
+    Load a mesh from the {{:https://en.wikipedia.org/wiki/STL_(file_format)}
+    stl} file at [path] (both binary and ascii encodings are supported).
+
+    - [eps] can be provided to control the precision of point
+      de-duplication/merge operation performed after loading (default is [1e-6])
+    - facets are reversed by default during deserialization to counter the
+      default reversal performed by {!to_stl}, however this can be avoided by
+      setting [~rev:false]. *)
+val of_stl : ?rev:bool -> ?eps:float -> string -> t

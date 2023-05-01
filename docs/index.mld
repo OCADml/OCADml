@@ -46,8 +46,8 @@ via [#require "gg.top";;].
 {1:cad CAD Package Specific Frontends}
 
 This library only provides a means to generate point and face based geometries,
-in order to perform boolean operations, validation, and export, you'll need to
-work with a particular CAD package.
+in order to perform boolean operations, validation, and export (to formats other
+than stl), you'll need to work with a particular CAD package.
 
 {2 OSCADml}
 - {{:https://github.io/OSCADml } github}

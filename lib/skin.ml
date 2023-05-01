@@ -16,11 +16,11 @@ type mapping =
 
 let is_direct = function
   | `Direct _ -> true
-  | _         -> false
+  | _ -> false
 
 let is_resampler = function
   | `Direct _ | `Reindex _ -> true
-  | _                      -> false
+  | _ -> false
 
 let is_duplicator = function
   | `Distance | `FastDistance | `Tangent -> true
@@ -39,7 +39,7 @@ let linear_transition ~fn ~init a b =
   Util.fold_init fn f init
 
 let slice_profiles ?(looped = false) ~slices = function
-  | [] | [ _ ]        -> invalid_arg "Too few profiles to slice."
+  | [] | [ _ ] -> invalid_arg "Too few profiles to slice."
   | hd :: tl as profs ->
     let len = List.length profs in
     let get_slices =
@@ -57,23 +57,25 @@ let slice_profiles ?(looped = false) ~slices = function
     else List.rev (last :: profiles)
 
 let skin
-    ?(style = `MinEdge)
-    ?(endcaps = `Both)
-    ?refine
-    ?(mapping = `Flat (`Direct `ByLen))
-    ~slices
+  ?(style = `MinEdge)
+  ?(endcaps = `Both)
+  ?refine
+  ?(mapping = `Flat (`Direct `ByLen))
+  ~slices
   = function
   | [] | [ _ ] -> invalid_arg "At least two profiles are required to skin."
-  | profs      ->
+  | profs ->
     let refine = Option.bind refine (fun n -> if n > 1 then Some n else None)
     and looped, bot_cap, top_cap =
       match endcaps with
       | `Both -> false, true, true
       | `Loop -> true, false, false
-      | `Bot  -> false, true, false
-      | `Top  -> false, false, true
+      | `Bot -> false, true, false
+      | `Top -> false, false, true
       | `None -> false, false, false
-    and resample n s = Path3.subdivide ~closed:true ~freq:(`N (n, s))
+    and resample n s = function
+      | [ hd ] -> List.init n (fun _ -> hd) (* single point "cone" layer *)
+      | path -> Path3.subdivide ~closed:true ~freq:(`N (n, s)) path
     and profs = Array.of_list profs in
     let n_profs = Array.length profs in
     let n_transitions = n_profs - if looped then 0 else 1 in
@@ -93,9 +95,9 @@ let skin
         (* there are no duplicators, so all profiles can be handled together. *)
         let unpack_resampler i =
           match get_mapping i with
-          | `Direct sampling  -> true, sampling
+          | `Direct sampling -> true, sampling
           | `Reindex sampling -> false, sampling
-          | _                 -> failwith "impossible"
+          | _ -> failwith "impossible"
         in
         let f i (acc, last_p) =
           let direct, sampling = unpack_resampler i in
@@ -145,13 +147,13 @@ let skin
           let j = (i + 1) mod n_profs in
           let pair =
             (* resamplers are upsampled before alignment, duplicators are upsampled after *)
-            match get_mapping i with
-            | `Direct _     -> [ up.(i); up.(j) ]
-            | `Reindex _    -> [ up.(i); Path3.reindex_polygon up.(i) up.(j) ]
-            | `Distance     -> upsample_dups @@ Path3.distance_match profs.(i) profs.(j)
+            match get_mapping (Util.index_wrap ~len:n_profs i) with
+            | `Direct _ -> [ up.(i); up.(j) ]
+            | `Reindex _ -> [ up.(i); Path3.reindex_polygon up.(i) up.(j) ]
+            | `Distance -> upsample_dups @@ Path3.distance_match profs.(i) profs.(j)
             | `FastDistance ->
               upsample_dups @@ Path3.aligned_distance_match profs.(i) profs.(j)
-            | `Tangent      -> upsample_dups @@ Path3.tangent_match profs.(i) profs.(j)
+            | `Tangent -> upsample_dups @@ Path3.tangent_match profs.(i) profs.(j)
           in
           slice_profiles ~slices:(`Flat (get_slices i)) pair :: acc
         in
@@ -171,3 +173,52 @@ let skin
 
 let skin_between ?style ?endcaps ?refine ?mapping:(m = `Direct `ByLen) ~slices:s a b =
   skin ?style ?refine ~mapping:(`Flat m) ?endcaps ~slices:(`Flat s) [ a; b ]
+
+let skline
+  ?(style = `MinEdge)
+  ?(endcaps = `Both)
+  ?refine
+  ?(sampling = `Flat `ByLen)
+  ?(fn = 64)
+  ?size
+  ?tangents
+  = function
+  | [] | [ _ ] -> invalid_arg "At least two profiles are required to skline."
+  | profs ->
+    let refine = Option.bind refine (fun n -> if n > 1 then Some n else None)
+    and closed =
+      match endcaps with
+      | `Loop -> true
+      | _ -> false
+    and resample n s = function
+      | [ hd ] -> List.init n (fun _ -> hd) (* single point "cone" layer *)
+      | path -> Path3.subdivide ~closed:true ~freq:(`N (n, s)) path
+    and profs = Array.of_list profs in
+    let n_profs = Array.length profs in
+    let n_transitions = n_profs - if closed then 0 else 1 in
+    let prof_lens = Array.map List.length profs in
+    let get_sampling = Util.getter ~len:n_transitions ~name:"sampling" sampling
+    and n =
+      let max = Array.fold_left (fun mx len -> Int.max len mx) 0 prof_lens in
+      Util.value_map_opt ~default:max (fun r -> r * max) refine
+    in
+    let resampled =
+      let a = Array.(make n_profs (of_list @@ resample n (get_sampling 0) profs.(0))) in
+      for i = 1 to n_profs - 1 do
+        a.(i) <- Array.of_list @@ resample n (get_sampling (i - 1)) profs.(i)
+      done;
+      a
+    in
+    let layers =
+      let n_profs = Array.length resampled
+      and n_bezs = Array.length resampled.(0) in
+      let bezs =
+        Array.init n_bezs (fun i ->
+          let path = List.init n_profs (fun j -> resampled.(j).(i)) in
+          Bezier3.of_path ~closed ?size ?tangents path )
+      in
+      let s = 1. /. Float.of_int fn in
+      List.init (fn + 1) (fun i ->
+        List.init n_bezs (fun j -> bezs.(j) (Float.of_int i *. s)) )
+    in
+    Mesh0.of_rows ~style ~endcaps layers

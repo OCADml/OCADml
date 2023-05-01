@@ -330,10 +330,8 @@ module Make (V : V.S) = struct
     | [ _; _ ] when closed -> invalid_arg "Path of length 2 cannot be closed."
     | hd :: tl as path ->
       let lerp init a b n =
-        Util.fold_init
-          n
-          (fun i ps -> V.lerp a b (Float.of_int i /. Float.of_int n) :: ps)
-          init
+        let f i ps = V.lerp a b (Float.of_int i /. Float.of_int n) :: ps in
+        Util.fold_init n f init
       and len = List.length path in
       ( match freq with
         | `Refine (1, _) | `RoughRefine (1, _) -> path
@@ -594,8 +592,8 @@ module Make (V : V.S) = struct
 
   let tangents ?(uniform = true) ?(closed = false) path =
     ( if uniform
-    then deriv ~closed path
-    else deriv_nonuniform ~closed ~h:(segment_lengths ~closed path) path )
+      then deriv ~closed path
+      else deriv_nonuniform ~closed ~h:(segment_lengths ~closed path) path )
     |> List.map V.normalize
 
   let continuous_closest_point
