@@ -1,6 +1,12 @@
+## v0.6.0
+
+- add `Mesh.skline` for skinning over profiles with Bézier splines
+- add `Mesh.of_stl` (load ascii and binary stls from file)
+- remove `?eps` from `Mesh.to_stl` (dropped point merging step)
+
 ## v0.5.0
 
-- `Mesh.t` implentation changed from polygonal to triangular
+- `Mesh.t` implementation changed from polygonal to triangular
 - replace `Mesh.triangulate` with `of_polyhedron`
 - add `Mesh.e` accessor to get points by index (points now stored as array)
 - add `?no_check` to `Path3.to_plane` to avoid coplanarity check (defaults to `false`)
