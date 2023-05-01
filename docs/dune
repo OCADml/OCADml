@@ -1,1 +1,25 @@
 (documentation)
+
+(executable
+ (name copier)
+ (libraries unix))
+
+(rule
+ (alias doc)
+ (deps
+  (:copier "copier.exe")
+  (:img
+   (glob_files assets/*.png)
+   (glob_files assets/*.jpg)
+   (glob_files ../examples/pngs/*.png)))
+ (targets
+  (dir "odoc-assets"))
+ (action
+  (progn
+   (run %{copier} "odoc-assets" "--basename" %{img})
+   (run %{copier} "../_doc/_html/OCADml/_assets" "--basename" %{img}))))
+
+(install
+ (files
+  (glob_files odoc-assets/*))
+ (section doc))

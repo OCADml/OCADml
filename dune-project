@@ -1,6 +1,8 @@
-(lang dune 3.3)
+(lang dune 3.6)
 
 (name OCADml)
+
+(using directory-targets 0.1)
 
 (generate_opam_files true)
 

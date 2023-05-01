@@ -6,6 +6,8 @@
 - add check in `Mesh.of_rows` allowing layers with uniform points (e.g. cone tip)
 - fix handling of single point profiles in `Mesh.skin` (allow and duplicate properly)
 - add `alcotest` testing dependency (+ tests for serialization/deserialization)
+- bump `dune` dependency to `v3.6` for directory targets
+- add usage example with image to docs
 
 ## v0.5.0
 

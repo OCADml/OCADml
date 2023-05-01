@@ -5,6 +5,25 @@ OCADml is a collection of types and functions built on top of
 Design (CAD) in OCaml. In particular, the style of design currently supported is
 that of 2D drawing and mesh generation via sweeping/extrusion.
 
+## Usage
+
+``` ocaml
+  open OCADml
+
+  let () =
+    let fn = 128 in
+    let base =
+      let sq = Path3.square ~center:true (v2 2. 4.) in
+      Path3.(roundover ~fn (Round.flat ~corner:(Round.circ (`Radius 0.5)) sq))
+    and c r h = Path3.ztrans h @@ Path3.circle ~fn r in
+    let cones = List.map (fun h -> [ c 0.6 h; c 0.5 (h +. 1.) ]) [ 4.; 5.; 6. ] in
+    List.flatten ([ base; Path3.ztrans 2. base; c 0.5 3.; c 0.5 4. ] :: cones)
+    |> Mesh.skin ~slices:(`Flat 0)
+    |> Mesh.to_stl "vacuum_connector.stl"
+```
+
+![vacuum connector](docs/assets/vacuum_connector.png)
+
 ## Documentation
 
 Documentation is available
