@@ -1,4 +1,0 @@
-(executable
- (public_name OCADml)
- (name main)
- (libraries OCADml))

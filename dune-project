@@ -26,7 +26,8 @@
    (>= 4.14.0))
   dune
   (gg
-   (>= 1.0.0)))
+   (>= 1.0.0))
+  (alcotest :with-test))
  (depopts cairo2)
  (conflicts
   (cairo2
