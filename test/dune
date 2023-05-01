@@ -1,0 +1,3 @@
+(test
+ (name ocadml_test)
+ (libraries OCADml alcotest))
